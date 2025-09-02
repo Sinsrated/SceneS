@@ -96,10 +96,7 @@ export default function Series() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white p-6 pt-24">
-      {/* Title */}
-      <h1 className="text-3xl font-bold mb-8 text-center text-purple-400">
-        📺 Series
-      </h1>
+     
 
       {/* Series Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
