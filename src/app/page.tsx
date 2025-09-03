@@ -1,14 +1,13 @@
-
-import HeroCarousel from "./components/homehero";
-
+"use client"
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  return(
-    <div className="">
-       <HeroCarousel />
-    </div>
-  );
-    
+  const router = useRouter();
 
+  useEffect(() => {
+    router.replace("/login");
+  }, [router]);
+
+  return null;
 }
-    

@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, Film, Tv, Calendar, User, Search } from "lucide-react";
+import { Home, Film, Tv, Calendar, User, Search, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -12,7 +12,7 @@ const Navbar = () => {
     { name: "Movies", icon: <Film size={22} />, href: "/movies" },
     { name: "Series", icon: <Tv size={22} />, href: "/series" },
     { name: "Upcoming", icon: <Calendar size={22} />, href: "/upcoming" },
-    { name: "Profile", icon: <User size={22} />, href: "/profile" },
+    { name: "Setting", icon: <Settings size={22} />, href: "/setting" },
   ];
 
   const isActive = (href: string) =>
@@ -21,9 +21,9 @@ const Navbar = () => {
   return (
     <>
       {/* 🌐 Desktop Glassmorphism Top Navbar */}
-      <nav className="hidden md:flex fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-6xl bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl px-6 py-3 items-center justify-between shadow-lg z-50">
+      <nav className="hidden md:flex fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-6xl bg-white/10 backdrop-blur-1g border border-white/20 rounded-2xl px-6 py-3 items-center justify-between shadow-lg z-50">
         {/* Logo */}
-        <div className="text-red-500 font-bold text-xl">SceneS</div>
+        <div className="text-red-500 font-bold text-xl">ScenecS</div>
 
         {/* Links */}
         <ul className="flex gap-8 text-white font-medium">
@@ -57,14 +57,14 @@ const Navbar = () => {
             />
           </div>
           <Link
-            href="/profile"
+            href="/setting"
             className={`p-2 rounded-full transition ${
-              isActive("/profile")
+              isActive("/settings")
                 ? "bg-red-500/20 text-red-400"
                 : "hover:bg-white/10 text-white"
             }`}
           >
-            <User size={22} />
+            <Settings size={22} />
           </Link>
         </div>
       </nav>

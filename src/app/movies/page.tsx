@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { X } from "lucide-react";
+import Header from "../components/Header"
 
 type Movie = {
   id: number;
@@ -44,6 +45,8 @@ export default function MoviesPage() {
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 
   return (
+    <>
+    <Header />
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white p-6 pt-24">
      
 
@@ -107,5 +110,6 @@ export default function MoviesPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

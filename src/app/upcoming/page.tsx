@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Calendar } from "lucide-react";
+import Header from "../components/Header"
 
 type Upcoming = {
   id: number;
@@ -43,6 +44,8 @@ export default function UpcomingPage() {
   const [hovered, setHovered] = useState<number | null>(null);
 
   return (
+    <>
+    <Header />
     <div className="min-h-screen bg-gradient-to-br from-black via-[#0b0f1a]/20 to-black text-white p-6 pt-24">
      
 
@@ -88,5 +91,6 @@ export default function UpcomingPage() {
         ))}
       </div>
     </div>
+    </>
   );
 }

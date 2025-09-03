@@ -48,7 +48,7 @@ const HeroCarousel = () => {
   const movie = movies[current];
 
   return (
-    <section className="relative w-full h-[80vh] overflow-hidden">
+    <section className="relative w-full h-[85vh] overflow-hidden">
       {/* Background Poster */}
       <img
         src={movie.poster}

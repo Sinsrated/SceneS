@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { X } from "lucide-react";
+import Header from "../components/Header"
 
 type Episode = {
   id: number;
@@ -95,6 +96,8 @@ export default function Series() {
   const [selectedSeason, setSelectedSeason] = useState<Season | null>(null);
 
   return (
+    <>
+    <Header />
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white p-6 pt-24">
      
 
@@ -213,5 +216,6 @@ export default function Series() {
         </div>
       )}
     </div>
+    </>
   );
 }
