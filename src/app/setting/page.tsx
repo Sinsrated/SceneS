@@ -1,122 +1,157 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { User, Bell, Shield, Palette, LogOut, ArrowLeft, X } from "lucide-react";
+import { User, Bell, Shield, LogOut, X, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+
+type UserType = { username: string; email: string; password: string };
 
 export default function Settings() {
   const router = useRouter();
-    const handleCreate = () => {
-    router.push("/login"); 
+  const [accounts, setAccounts] = useState<UserType[]>([]);
+  const [user, setUser] = useState<UserType | null>(null);
+  const [showAccounts, setShowAccounts] = useState(false);
+
+  useEffect(() => {
+    const storedAccounts = localStorage.getItem("accounts");
+    const storedUser = localStorage.getItem("user");
+    if (storedAccounts) setAccounts(JSON.parse(storedAccounts));
+    if (storedUser) setUser(JSON.parse(storedUser));
+  }, []);
+
+  // ✅ Switch account
+  const handleSwitch = (acc: UserType) => {
+    localStorage.setItem("user", JSON.stringify(acc));
+    setUser(acc);
+    router.refresh(); // reloads session
   };
 
+  // ✅ Logout
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    router.replace("/login");
+  };
 
   return (
     <section className="min-h-screen flex items-center justify-center bg-[url('/futuristic-bg.jpg')] bg-cover bg-center relative p-6">
-     
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
-        className="w-full max-w-2xl p-8 rounded-2xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-xl text-white"
+        className="w-full max-w-2xl p-8 rounded-2xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-xl text-white relative"
       >
-        {/* Header */}
-         {/* Back Button */}
-       
-      <button
-        onClick={() => router.back()}
-        className="absolute top-3 right-1 flex items-center gap-2   px-4 py-2 rounded-xl  transition-all"
-      >
-        <X size={18} /> 
-      </button>
-      
+        {/* Close Button */}
+        <button
+          onClick={() => router.replace("/home")}
+          className="absolute top-3 right-3 p-2 rounded-xl hover:bg-white/10"
+        >
+          <X size={18} />
+        </button>
 
         <h1 className="text-4xl font-bold text-center mb-8">⚙️ Settings</h1>
 
-        {/* User Profile */}
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          className="flex items-center gap-4 p-4 rounded-xl bg-white/10 border border-white/20 mb-6"
-        >
-          <img
-            src="./sins.jpg"
-            alt="User Avatar"
-            className="w-16 h-16 rounded-full border-2 border-white/30"
-          />
-          <div>
-            <h2 className="text-xl font-semibold">Sins</h2>
-            <p className="text-gray-300 text-sm">money@email.com</p>
-          </div>
-        </motion.div>
-
-        {/* Settings Options */}
-        <div className="space-y-4">
-          {/* Account */}
+        {/* Active User */}
+        {user && (
           <motion.div
             whileHover={{ scale: 1.02 }}
-            className="flex items-center justify-between p-4 rounded-xl bg-white/10 border border-white/20"
+            className="flex flex-col gap-1 p-4 rounded-xl bg-white/10 border border-white/20 mb-6"
+          >
+            <h2 className="text-xl font-semibold">{user.username}</h2>
+            <p className="text-gray-300 text-sm">{user.email}</p>
+          </motion.div>
+        )}
+
+        {/* Manage Accounts */}
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          className="p-4 rounded-xl bg-white/10 border border-white/20 mb-4"
+        >
+          <div
+            className="flex items-center justify-between cursor-pointer"
+            onClick={() => setShowAccounts(!showAccounts)}
           >
             <div className="flex items-center gap-3">
               <User size={20} />
-              <span className="font-medium">Account</span>
+              <span className="font-medium">Add Account</span>
             </div>
-            <button className="text-sm text-cyan-400 hover:underline">
-              Manage
-            </button>
-          </motion.div>
+            <span className="text-sm text-cyan-400">
+              {showAccounts ? "x" : "+"}
+            </span>
+          </div>
 
-          {/* Notifications */}
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="flex items-center justify-between p-4 rounded-xl bg-white/10 border border-white/20"
-          >
-            <div className="flex items-center gap-3">
-              <Bell size={20} />
-              <span className="font-medium">Notifications</span>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" className="sr-only peer" defaultChecked />
-              <div className="w-11 h-6 bg-gray-500 rounded-full peer peer-checked:bg-cyan-500 transition-all"></div>
-              <span className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></span>
-            </label>
-          </motion.div>
+          {showAccounts && (
+            <div className="mt-4 space-y-3">
+              {accounts.map((acc, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center justify-between p-3 rounded-lg ${
+                    acc.email === user?.email
+                      ? "bg-cyan-500/30 border border-cyan-400/50"
+                      : "bg-white/5 border border-white/20"
+                  }`}
+                >
+                  <div>
+                    <p className="font-medium">{acc.username}</p>
+                    <p className="text-sm text-gray-300">{acc.email}</p>
+                  </div>
+                  {acc.email !== user?.email && (
+                    <button
+                      onClick={() => handleSwitch(acc)}
+                      className="text-sm text-pink-400 hover:underline"
+                    >
+                      Switch
+                    </button>
+                  )}
+                </div>
+              ))}
 
-          {/* Privacy */}
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="flex items-center justify-between p-4 rounded-xl bg-white/10 border border-white/20"
-          >
-            <div className="flex items-center gap-3">
-              <Shield size={20} />
-              <span className="font-medium">Privacy</span>
+              {/* Add Account */}
+              <button
+                onClick={() => router.push("/login")}
+                className="w-full flex items-center justify-center gap-2 mt-3 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold shadow-lg"
+              >
+                <Plus size={18} /> Add Account
+              </button>
             </div>
-            <button className="text-sm text-pink-400 hover:underline">
-              Configure
-            </button>
-          </motion.div>
+          )}
+        </motion.div>
 
-          {/* Theme */}
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="flex items-center justify-between p-4 rounded-xl bg-white/10 border border-white/20"
-          >
-            <div className="flex items-center gap-3">
-              <Palette size={20} />
-              <span className="font-medium">Theme</span>
-            </div>
-            <select className="bg-transparent border border-white/20 rounded-lg px-3 py-1 text-white focus:outline-none">
-              <option className="bg-gray-900">Light</option>
-              <option className="bg-gray-900">Dark</option>
-              <option className="bg-gray-900">Neon</option>
-            </select>
-          </motion.div>
-        </div>
+        {/* Notifications */}
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          className="flex items-center justify-between p-4 rounded-xl bg-white/10 border border-white/20 mb-4"
+        >
+          <div className="flex items-center gap-3">
+            <Bell size={20} />
+            <span className="font-medium">Notifications</span>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" className="sr-only peer" defaultChecked />
+            <div className="w-11 h-6 bg-gray-500 rounded-full peer peer-checked:bg-cyan-500 transition-all"></div>
+            <span className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></span>
+          </label>
+        </motion.div>
+
+        {/* Privacy */}
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          className="flex items-center justify-between p-4 rounded-xl bg-white/10 border border-white/20"
+        >
+          <div className="flex items-center gap-3">
+            <Shield size={20} />
+            <span className="font-medium">Privacy</span>
+          </div>
+          <button className="text-sm text-pink-400 hover:underline">
+            Configure
+          </button>
+        </motion.div>
 
         {/* Logout */}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-            onClick={handleCreate} 
+          onClick={handleLogout}
           className="w-full flex items-center justify-center gap-2 mt-8 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold shadow-lg"
         >
           <LogOut size={20} /> Logout

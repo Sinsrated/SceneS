@@ -2,18 +2,40 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { User, Mail, Lock, ArrowRight } from "lucide-react";
+import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; 
+import { useRouter } from "next/navigation";
 
 export default function CreateAccount() {
   const router = useRouter();
-  const [username, setUsername] = useState("Sins");
-  const [email, setEmail] = useState("money@gmail.com");
-  const [password, setPassword] = useState("money");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
+  // ✅ Handle account creation
   const handleCreate = () => {
-    router.push("/home"); 
+    if (!username || !email || !password || !confirmPassword) {
+      setError("Please fill in all fields.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setError("");
+
+    // ✅ Save user data to localStorage
+    const user = { username, email, password };
+    localStorage.setItem("user", JSON.stringify(user));
+
+    // Redirect to cinematic loading screen
+    router.replace("/setting");
   };
 
   return (
@@ -28,7 +50,10 @@ export default function CreateAccount() {
           Create Account 🚀
         </h1>
 
+        {error && <p className="text-red-400 text-center mb-4">{error}</p>}
+
         <div className="space-y-4">
+          {/* Username */}
           <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
             <User className="text-white mr-3" size={20} />
             <input
@@ -40,6 +65,7 @@ export default function CreateAccount() {
             />
           </div>
 
+          {/* Email */}
           <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
             <Mail className="text-white mr-3" size={20} />
             <input
@@ -51,21 +77,49 @@ export default function CreateAccount() {
             />
           </div>
 
+          {/* Password */}
           <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
             <Lock className="text-white mr-3" size={20} />
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="bg-transparent w-full outline-none text-white placeholder-gray-300"
             />
+            <button
+              type="button"
+              className="ml-2 text-white"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
           </div>
 
+          {/* Confirm Password */}
+          <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
+            <Lock className="text-white mr-3" size={20} />
+            <input
+              type={showConfirm ? "text" : "password"}
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="bg-transparent w-full outline-none text-white placeholder-gray-300"
+            />
+            <button
+              type="button"
+              className="ml-2 text-white"
+              onClick={() => setShowConfirm(!showConfirm)}
+            >
+              {showConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
+
+          {/* Create Account Button */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={handleCreate} // Navigate to home
+            onClick={handleCreate}
             className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3 rounded-xl font-semibold shadow-lg"
           >
             Create Account <ArrowRight size={20} />

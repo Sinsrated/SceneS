@@ -14,8 +14,8 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-6">
         {/* Logo / Brand */}
         <div className="flex items-center gap-2">
-          <Film size={28} className="text-cyan-400" />
-          <span className="text-xl font-bold">ScenecS</span>
+          <Film size={28} className="text-red-500" />
+          <span className="text-xl text-red-500 font-bold">ScenecS</span>
         </div>
 
       
