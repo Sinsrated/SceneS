@@ -74,12 +74,12 @@ const HeroCarousel = () => {
       <img
         src={movie.poster}
         alt={movie.title}
-        className="absolute inset-0 w-full h-full object-cover object-top brightness-60" 
+        className="absolute inset-0 w-full h-full object-cover object-top brightness-70" 
         // 👆 keeps top aligned, trims bottom
       />
 
       {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/90" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/70" />
 
       {/* Desktop Hero Content */}
       <div className="hidden md:flex relative z-10 text-left max-w-6xl px-4 mx-auto h-full flex-col justify-end pb-8">
