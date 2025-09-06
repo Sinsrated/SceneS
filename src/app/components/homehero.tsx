@@ -66,9 +66,19 @@ const HeroCarousel = () => {
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Separate refs for mobile + desktop
-  const mobileScrollRef = useRef<HTMLDivElement>(null);
-  const desktopScrollRef = useRef<HTMLDivElement>(null);
+  const mobileScrollRef = useRef<HTMLDivElement | null>(null);
+  const desktopScrollRef = useRef<HTMLDivElement | null>(null);
+
+  const movie = movies[current];
+
+  const relatedMovies = selectedMovie
+    ? movies.filter(
+        (m) =>
+          m.genre.split("•")[0].trim() ===
+            selectedMovie.genre.split("•")[0].trim() &&
+          m.id !== selectedMovie.id
+      )
+    : [];
 
   // Auto-play
   useEffect(() => {
@@ -76,7 +86,6 @@ const HeroCarousel = () => {
       const next = (current + 1) % movies.length;
       setCurrent(next);
 
-      // Detect screen size → scroll correct carousel
       if (window.innerWidth < 768) {
         mobileScrollRef.current?.scrollTo({
           left: next * (mobileScrollRef.current?.clientWidth ?? 0),
@@ -93,25 +102,14 @@ const HeroCarousel = () => {
     return () => clearInterval(interval);
   }, [current]);
 
-  // Sync dots on manual scroll
-  const handleScroll = (ref: React.RefObject<HTMLDivElement>) => {
-    if (!ref.current) return;
-    const scrollLeft = ref.current.scrollLeft;
-    const width = ref.current.clientWidth;
+  // Scroll handler
+  const handleScroll = (element: HTMLDivElement | null) => {
+    if (!element) return;
+    const scrollLeft = element.scrollLeft;
+    const width = element.clientWidth;
     const index = Math.round(scrollLeft / width);
     if (index !== current) setCurrent(index);
   };
-
-  const movie = movies[current];
-
-  const relatedMovies = selectedMovie
-    ? movies.filter(
-        (m) =>
-          m.genre.split("•")[0].trim() ===
-            selectedMovie.genre.split("•")[0].trim() &&
-          m.id !== selectedMovie.id
-      )
-    : [];
 
   return (
     <section className="relative w-full px-5 py-16 flex flex-col items-center overflow-hidden">
@@ -129,7 +127,7 @@ const HeroCarousel = () => {
       {/* Mobile Carousel */}
       <div
         ref={mobileScrollRef}
-        onScroll={() => handleScroll(mobileScrollRef)}
+        onScroll={() => handleScroll(mobileScrollRef.current)}
         className="relative z-10 top-5 flex overflow-x-auto snap-x snap-mandatory w-full scrollbar-hide scroll-smooth md:hidden"
       >
         {movies.map((movie, index) => (
@@ -166,7 +164,7 @@ const HeroCarousel = () => {
       {/* Desktop Carousel */}
       <div
         ref={desktopScrollRef}
-        onScroll={() => handleScroll(desktopScrollRef)}
+        onScroll={() => handleScroll(desktopScrollRef.current)}
         className="hidden md:flex relative z-10 top-5 overflow-x-auto snap-x snap-mandatory w-[80%] scrollbar-hide scroll-smooth"
       >
         {movies.map((movie, index) => (
@@ -200,32 +198,31 @@ const HeroCarousel = () => {
         ))}
       </div>
 
-      {/* Dots */}
+      {/* Vertical Dots */}
       <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-10">
-  {movies.map((_, index) => (
-    <button
-      key={index}
-      onClick={() => {
-        setCurrent(index);
-        if (window.innerWidth < 768) {
-          mobileScrollRef.current?.scrollTo({
-            left: index * (mobileScrollRef.current?.clientWidth ?? 0),
-            behavior: "smooth",
-          });
-        } else {
-          desktopScrollRef.current?.scrollTo({
-            left: index * (desktopScrollRef.current?.clientWidth ?? 0),
-            behavior: "smooth",
-          });
-        }
-      }}
-      className={`w-3 h-3 rounded-full transition-all ${
-        current === index ? "bg-red-500 scale-125" : "bg-gray-500/50"
-      }`}
-    />
-  ))}
-</div>
-
+        {movies.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => {
+              setCurrent(index);
+              if (window.innerWidth < 768) {
+                mobileScrollRef.current?.scrollTo({
+                  left: index * (mobileScrollRef.current?.clientWidth ?? 0),
+                  behavior: "smooth",
+                });
+              } else {
+                desktopScrollRef.current?.scrollTo({
+                  left: index * (desktopScrollRef.current?.clientWidth ?? 0),
+                  behavior: "smooth",
+                });
+              }
+            }}
+            className={`w-3 h-3 rounded-full transition-all ${
+              current === index ? "bg-red-500 scale-125" : "bg-gray-500/50"
+            }`}
+          />
+        ))}
+      </div>
 
       {/* Modal */}
       <AnimatePresence>
