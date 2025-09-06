@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Plus } from "lucide-react";
+import { Play, Bookmark } from "lucide-react";
 
 type Movie = {
   id: number;
@@ -82,76 +82,72 @@ const Animation = () => {
       </div>
 
       {/* Expanded Details */}
-      <AnimatePresence>
-        {selectedMovie && (
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-lg flex items-center justify-center z-50 p-6"
-          >
-            <div className="bg-white/10 rounded-2xl shadow-2xl max-w-4xl w-full p-6 flex flex-col md:flex-row gap-6">
-              {/* Poster */}
-              <Image
-                src={selectedMovie.poster}
-                alt={selectedMovie.title}
-                width={300}
-                height={450}
-                className="rounded-xl object-cover"
-              />
-
-              {/* Details */}
-              <div className="flex flex-col justify-between flex-1">
-                <div>
-                  <h2 className="text-3xl font-bold text-white mb-2">
-                    {selectedMovie.title}
-                  </h2>
-                  <p className="text-gray-300 mb-4">
-                    {selectedMovie.description}
-                  </p>
-                </div>
-
-                <div className="flex gap-4 mb-6">
-                  <button className="flex items-center gap-2 bg-white text-black px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                    <Play size={18} /> Play
-                  </button>
-                  <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                    <Plus size={18} /> Add
-                  </button>
-                </div>
-
-                {/* More Like This */}
-                <div>
-                  <h3 className="text-xl font-bold text-white mb-3">
-                    More like this
-                  </h3>
-                  <div className="flex gap-4 overflow-x-auto scrollbar-hide">
-                    {relatedMovies.map((m) => (
-                      <Image
-                        key={m.id}
-                        src={m.poster}
-                        alt={m.title}
-                        width={120}
-                        height={180}
-                        className="rounded-lg flex-shrink-0 object-cover cursor-pointer hover:scale-105 transition"
-                        onClick={() => setSelectedMovie(m)}
-                      />
-                    ))}
+       {/* Modal */}
+            <AnimatePresence>
+              {selectedMovie && (
+                <motion.div
+                  initial={{ opacity: 0, y: 50 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 50 }}
+                  className="fixed inset-0 bg-black/70 backdrop-blur-lg z-50 p-4 overflow-y-auto"
+                >
+                  <div className="bg-white/10 rounded-2xl shadow-2xl max-w-5xl w-full mx-auto p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10">
+                    <Image
+                      src={selectedMovie.poster}
+                      alt={selectedMovie.title}
+                      width={300}
+                      height={450}
+                      className="rounded-xl object-cover"
+                    />
+                    <div className="flex flex-col justify-between flex-1">
+                      <div>
+                        <h2 className="text-3xl font-bold text-white mb-2">
+                          {selectedMovie.title}
+                        </h2>
+                        <p className="text-gray-300 mb-4">
+                          {selectedMovie.description}
+                        </p>
+                      </div>
+                      <div className="flex gap-4 mb-6">
+                        <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
+                          <Play size={18} />
+                        </button>
+                        <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
+                          <Bookmark size={18} />
+                        </button>
+                      </div>
+                      {relatedMovies.length > 0 && (
+                        <div>
+                          <h3 className="text-xl font-bold text-white mb-3">
+                            More like this
+                          </h3>
+                          <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
+                            {relatedMovies.map((m) => (
+                              <div key={m.id} className="flex-shrink-0 snap-start">
+                                <Image
+                                  src={m.poster}
+                                  alt={m.title}
+                                  width={120}
+                                  height={180}
+                                  className="rounded-lg object-cover cursor-pointer hover:scale-105 md:hover:scale-105 transition"
+                                  onClick={() => setSelectedMovie(m)}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      className="absolute top-4 right-4 text-white text-2xl"
+                      onClick={() => setSelectedMovie(null)}
+                    >
+                      ✕
+                    </button>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Close overlay */}
-            <button
-              className="absolute top-6 right-6 text-white text-2xl"
-              onClick={() => setSelectedMovie(null)}
-            >
-              ✕
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                </motion.div>
+              )}
+            </AnimatePresence>
     </section>
   );
 };
