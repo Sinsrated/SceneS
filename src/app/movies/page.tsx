@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Bookmark } from "lucide-react";
+import Header from "../components/Header"
 
 type Movie = {
   id: number;
@@ -53,6 +54,8 @@ const LatestMovies = () => {
     : [];
 
   return (
+    <>
+    <Header />
     <section className="w-full  py-8">
      
 
@@ -149,6 +152,7 @@ const LatestMovies = () => {
              )}
            </AnimatePresence>
                </section>
+               </>
   );
 };
 
