@@ -14,11 +14,11 @@ type Movie = {
 };
 
 const movies: Movie[] = [
-  
   {
     id: 2,
     title: "Inception",
-    poster: "https://image.tmdb.org/t/p/w500/edv5CZvWj09upOsy2Y6IwDhK8bt.jpg",
+    poster:
+      "https://image.tmdb.org/t/p/w500/edv5CZvWj09upOsy2Y6IwDhK8bt.jpg",
     description:
       "A skilled thief is offered a chance to have his past crimes forgiven if he implants an idea into a target's subconscious.",
     genre: "Sci-Fi",
@@ -26,7 +26,8 @@ const movies: Movie[] = [
   {
     id: 3,
     title: "Dune",
-    poster: "https://image.tmdb.org/t/p/w500/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
+    poster:
+      "https://image.tmdb.org/t/p/w500/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
     description:
       "A young noble must navigate politics, betrayal, and prophecy on a desert planet that holds the galaxy’s most valuable resource.",
     genre: "Sci-Fi",
@@ -34,7 +35,8 @@ const movies: Movie[] = [
   {
     id: 4,
     title: "The Batman",
-    poster: "https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg",
+    poster:
+      "https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg",
     description:
       "Batman ventures into Gotham City's underworld when a sadistic killer leaves behind a trail of cryptic clues.",
     genre: "Action",
@@ -51,16 +53,16 @@ const Animation = () => {
     : [];
 
   return (
-    <section className="w-full px-6 py-8">
+    <section className="w-full py-8">
       <h2 className="text-2xl font-bold text-white mb-6">Animation</h2>
 
-      {/* Movie List */}
+      {/* Movie List (scrollable) */}
       <div className="flex gap-6 overflow-x-auto scrollbar-hide">
         {movies.map((movie) => (
           <motion.div
             key={movie.id}
             whileHover={{ scale: 1.02 }}
-            className="min-w-{180px} bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer"
+            className="w-[180px] flex-shrink-0 bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer"
             onClick={() => setSelectedMovie(movie)}
           >
             <Image
@@ -74,8 +76,6 @@ const Animation = () => {
               <h3 className="text-sm font-semibold text-white truncate">
                 {movie.title}
               </h3>
-              
-              
             </div>
           </motion.div>
         ))}
@@ -133,7 +133,7 @@ const Animation = () => {
                         alt={m.title}
                         width={120}
                         height={180}
-                        className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
+                        className="rounded-lg flex-shrink-0 object-cover cursor-pointer hover:scale-105 transition"
                         onClick={() => setSelectedMovie(m)}
                       />
                     ))}
