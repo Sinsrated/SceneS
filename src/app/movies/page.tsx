@@ -1,115 +1,155 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import Image from "next/image";
-import { X } from "lucide-react";
-import Header from "../components/Header"
+import { motion, AnimatePresence } from "framer-motion";
+import { Play, Bookmark } from "lucide-react";
 
 type Movie = {
   id: number;
   title: string;
   poster: string;
-  year: string;
   description: string;
+  genre: string;
 };
 
 const movies: Movie[] = [
   {
-    id: 1,
-    title: "American Pyscho",
-    poster: "/movieposters/americanpyscho.jpg",
-    year: "2000",
-    description:
-      "Patrick Bateman, a wealthy investment banker in 1980s Manhattan, has a secret life as a serial killer.",
-  },
-  {
     id: 2,
-    title: "Ghost II",
-    poster: "/movieposters/conjuring.jpg",
-    year: "2020 - 2024",
+    title: "Inception",
+    poster:
+      "https://image.tmdb.org/t/p/w500/edv5CZvWj09upOsy2Y6IwDhK8bt.jpg",
     description:
-      "After his father's death, Tariq is thrust into a new world of crime, driven by the need to save his family.",
+      "A skilled thief is offered a chance to have his past crimes forgiven if he implants an idea into a target's subconscious.",
+    genre: "Sci-Fi",
   },
   {
     id: 3,
-    title: "Manchester By The Sea",
-    poster: "/movieposters/manbythesea.jpg",
-    year: "2016",
+    title: "Dune",
+    poster:
+      "https://image.tmdb.org/t/p/w500/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
     description:
-      "The film is a powerful exploration of grief, trauma, responsibility, and the struggle to move forward after profound loss.",
+      "A young noble must navigate politics, betrayal, and prophecy on a desert planet that holds the galaxy’s most valuable resource.",
+    genre: "Sci-Fi",
   },
-  // ➕ Add more movie objects here
+  {
+    id: 4,
+    title: "The Batman",
+    poster:
+      "https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg",
+    description:
+      "Batman ventures into Gotham City's underworld when a sadistic killer leaves behind a trail of cryptic clues.",
+    genre: "Action",
+  },
 ];
 
-export default function MoviesPage() {
+const LatestMovies = () => {
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 
+  const relatedMovies = selectedMovie
+    ? movies.filter(
+        (m) => m.genre === selectedMovie.genre && m.id !== selectedMovie.id
+      )
+    : [];
+
   return (
-    <>
-    <Header />
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white p-6 pt-24">
+    <section className="w-full  py-8">
      
 
-      {/* Movie Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+      {/* Movie List (scrollable) */}
+      <div className="flex gap-6 overflow-x-auto scrollbar-hide">
         {movies.map((movie) => (
-          <button
+          <motion.div
             key={movie.id}
+            whileHover={{ scale: 1.02 }}
+            className="w-[180px] flex-shrink-0 bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer"
             onClick={() => setSelectedMovie(movie)}
-            className="relative group overflow-hidden rounded-2xl shadow-lg transition transform hover:scale-105"
           >
             <Image
               src={movie.poster}
               alt={movie.title}
-              width={300}
-              height={450}
-              className="w-auto h-[200px] object-cover"
+              width={180}
+              height={260}
+              className="object-cover h-64 w-full"
             />
-            {/* Overlay on hover */}
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-              <span className="text-red-400 font-bold text-lg">
-                View Details
-              </span>
+            <div className="p-3">
+              <h3 className="text-sm font-semibold text-white truncate">
+                {movie.title}
+              </h3>
             </div>
-          </button>
+          </motion.div>
         ))}
       </div>
 
-      {/* Modal Preview */}
-      {selectedMovie && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-lg flex items-center justify-center z-50">
-          <div className="bg-white/10 border border-white/20 rounded-2xl p-6 max-w-lg w-full shadow-xl relative">
-            {/* Close Button */}
-            <button
-              onClick={() => setSelectedMovie(null)}
-              className="absolute top-3 right-3 text-gray-300 hover:text-red-400 transition"
-            >
-              <X size={22} />
-            </button>
-
-            {/* Poster & Info */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Image
-                src={selectedMovie.poster}
-                alt={selectedMovie.title}
-                width={200}
-                height={300}
-                className="rounded-xl shadow-md"
-              />
-              <div className="flex flex-col justify-between">
-                <h2 className="text-2xl font-bold text-red-400">
-                  {selectedMovie.title}
-                </h2>
-                <p className="text-sm text-gray-300">{selectedMovie.year}</p>
-                <p className="mt-2 text-gray-200 text-sm leading-relaxed">
-                  {selectedMovie.description}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-    </>
+      {/* Expanded Details */}
+      {/* Modal */}
+           <AnimatePresence>
+             {selectedMovie && (
+               <motion.div
+                 initial={{ opacity: 0, y: 50 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 exit={{ opacity: 0, y: 50 }}
+                 className="fixed inset-0 bg-black/70 backdrop-blur-lg z-50 p-4 overflow-y-auto"
+               >
+                 <div className="bg-white/10 rounded-2xl shadow-2xl max-w-5xl w-full mx-auto p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10">
+                   <Image
+                     src={selectedMovie.poster}
+                     alt={selectedMovie.title}
+                     width={300}
+                     height={450}
+                     className="rounded-xl object-cover"
+                   />
+                   <div className="flex flex-col justify-between flex-1">
+                     <div>
+                       <h2 className="text-3xl font-bold text-white mb-2">
+                         {selectedMovie.title}
+                       </h2>
+                       <p className="text-gray-300 mb-4">
+                         {selectedMovie.description}
+                       </p>
+                     </div>
+                     <div className="flex gap-4 mb-6">
+                       <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
+                         <Play size={18} />
+                       </button>
+                       <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
+                         <Bookmark size={18} />
+                       </button>
+                     </div>
+                     {relatedMovies.length > 0 && (
+                       <div>
+                         <h3 className="text-xl font-bold text-white mb-3">
+                           More like this
+                         </h3>
+                         <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
+                           {relatedMovies.map((m) => (
+                             <div key={m.id} className="flex-shrink-0 snap-start">
+                               <Image
+                                 src={m.poster}
+                                 alt={m.title}
+                                 width={120}
+                                 height={180}
+                                 className="rounded-lg object-cover cursor-pointer hover:scale-105 md:hover:scale-105 transition"
+                                 onClick={() => setSelectedMovie(m)}
+                               />
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     )}
+                   </div>
+                   <button
+                     className="absolute top-4 right-4 text-white text-2xl"
+                     onClick={() => setSelectedMovie(null)}
+                   >
+                     ✕
+                   </button>
+                 </div>
+               </motion.div>
+             )}
+           </AnimatePresence>
+               </section>
   );
-}
+};
+
+export default LatestMovies;
