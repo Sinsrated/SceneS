@@ -4,70 +4,79 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bookmark, Play } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
+
+// --- Supabase Client ---
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 type Movie = {
   id: number;
   title: string;
   year: number;
-  genre: string;
+  genre: string; // now a combined string like "Sci-Fi • Thriller"
   description: string;
   poster: string;
   background: string;
 };
 
-const movies: Movie[] = [
-  {
-    id: 1,
-    title: "Power",
-    year: 2014,
-    genre: "Crime • Action",
-    description:
-      "A team of explorers travel through a wormhole in space in an attempt to ensure humanity's survival.",
-    poster: "/movieposters/ghost.jpg",
-    background: "/movieposters/powerbook.jpg",
-  },
-  {
-    id: 2,
-    title: "Inception",
-    year: 2010,
-    genre: "Sci-Fi • Thriller",
-    description:
-      "A skilled thief is offered a chance to have his past crimes forgiven if he implants an idea into a target's subconscious.",
-    poster: "https://image.tmdb.org/t/p/w500/edv5CZvWj09upOsy2Y6IwDhK8bt.jpg",
-    background:
-      "https://image.tmdb.org/t/p/w500/edv5CZvWj09upOsy2Y6IwDhK8bt.jpg",
-  },
-  {
-    id: 3,
-    title: "Dune",
-    year: 2021,
-    genre: "Sci-Fi • Drama",
-    description:
-      "A young noble must navigate politics, betrayal, and prophecy on a desert planet that holds the galaxy’s most valuable resource.",
-    poster: "https://image.tmdb.org/t/p/w500/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
-    background:
-      "https://image.tmdb.org/t/p/w500/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
-  },
-  {
-    id: 4,
-    title: "The Batman",
-    year: 2022,
-    genre: "Action • Crime",
-    description:
-      "Batman ventures into Gotham City's underworld when a sadistic killer leaves behind a trail of cryptic clues.",
-    poster: "https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg",
-    background:
-      "https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg",
-  },
-];
-
 const HeroCarousel = () => {
+  const [movies, setMovies] = useState<Movie[]>([]);
   const [current, setCurrent] = useState(0);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
 
+  const cardRef = useRef<HTMLDivElement>(null);
   const mobileScrollRef = useRef<HTMLDivElement | null>(null);
   const desktopScrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Fetch movies with genres
+  useEffect(() => {
+    const fetchMovies = async () => {
+      try {
+       const { data: moviesData, error } = await supabase
+  .from("movies")
+  .select(`
+    id,
+    title,
+    description,
+    poster_url,
+    backdrop_url,
+    year,
+    movie_genres (
+      genres ( name )
+    )
+  `);
+
+if (error) {
+  console.error("Error fetching movies:", error.message);
+  return;
+}
+
+const formatted: Movie[] =
+  moviesData?.map((m: any) => ({
+    id: m.id,
+    title: m.title,
+    year: m.year, // ✅ directly from your DB now
+    description: m.description,
+    poster: m.poster_url,
+    background: m.backdrop_url || m.poster_url,
+    genre: m.movie_genres
+      .map((mg: any) => mg.genres?.name)
+      .filter(Boolean)
+      .join(" • "),
+  })) || [];
+
+setMovies(formatted);
+
+      } catch (err: any) {
+        console.error("Unexpected fetch error:", err.message);
+      }
+    };
+
+    fetchMovies();
+  }, []);
 
   const movie = movies[current];
 
@@ -75,13 +84,13 @@ const HeroCarousel = () => {
     ? movies.filter(
         (m) =>
           m.genre.split("•")[0].trim() ===
-            selectedMovie.genre.split("•")[0].trim() &&
-          m.id !== selectedMovie.id
+            selectedMovie.genre.split("•")[0].trim() && m.id !== selectedMovie.id
       )
     : [];
 
-  // Auto-play
+  // --- Auto-play ---
   useEffect(() => {
+    if (!movies.length) return;
     const interval = setInterval(() => {
       const next = (current + 1) % movies.length;
       setCurrent(next);
@@ -100,9 +109,8 @@ const HeroCarousel = () => {
     }, 6000);
 
     return () => clearInterval(interval);
-  }, [current]);
+  }, [current, movies.length]);
 
-  // Scroll handler
   const handleScroll = (element: HTMLDivElement | null) => {
     if (!element) return;
     const scrollLeft = element.scrollLeft;
@@ -110,6 +118,14 @@ const HeroCarousel = () => {
     const index = Math.round(scrollLeft / width);
     if (index !== current) setCurrent(index);
   };
+
+  if (!movie) {
+    return (
+      <section className="w-full h-[50vh] flex items-center justify-center text-white">
+       
+      </section>
+    );
+  }
 
   return (
     <section className="relative w-full px-5 py-16 flex flex-col items-center overflow-hidden">
@@ -229,7 +245,7 @@ const HeroCarousel = () => {
         {selectedMovie && (
           <motion.div
             initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={{ opacity: 1, y: 50 }}
             exit={{ opacity: 0, y: 50 }}
             className="fixed inset-0 bg-black/70 backdrop-blur-lg z-50 p-4 overflow-y-auto"
           >

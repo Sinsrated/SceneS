@@ -1,221 +1,147 @@
 "use client";
-
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { X } from "lucide-react";
-import Header from "../components/Header"
+import { motion, AnimatePresence } from "framer-motion";
+import { Play, Bookmark } from "lucide-react";
+import Header from "../components/Header";
+import { supabase } from "../lib/supabaseClient"; // ✅ make sure this file exists
 
-type Episode = {
+interface Movie {
   id: number;
   title: string;
-  thumbnail: string;
+  poster_url: string; // 👈 matches Supabase column
   description: string;
-};
+  release_date: string;
+  rating: number;
+  // optional genre if you stored it in `genres`
+  genre?: string;
+}
 
-type Season = {
-  id: number;
-  season: string;
-  poster: string;
-  episodes: Episode[];
-};
+const Movies = () => {
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 
-type Series = {
-  id: number;
-  title: string;
-  poster: string;
-  description: string;
-  seasons: Season[];
-};
+  // ✅ Fetch from Supabase
+  useEffect(() => {
+    const fetchMovies = async () => {
+      const { data, error } = await supabase.from("movies").select("*");
+      if (error) {
+        console.error("Error fetching movies:", error.message);
+      } else {
+        setMovies(data as Movie[]);
+      }
+    };
 
-const seriesList: Series[] = [
-  {
-    id: 1,
-    title: "Power: Ghost",
-    poster: "/movieposters/powerbook.jpg",
-    description:
-      "Tariq St. Patrick navigates life, crime, and betrayal after his father's death.",
-    seasons: [
-      {
-        id: 1,
-        season: "S1",
-        poster: "/movieposters/powerbook.jpg",
-        episodes: [
-          {
-            id: 1,
-            title: "Pilot",
-            thumbnail: "/series/thumbnails/ep1.jpg",
-            description:
-              "The journey begins as Tariq struggles to balance school and the streets.",
-          },
-        ],
-      },
-      {
-        id: 2,
-        season: "S2",
-        poster: "/movieposters/powerbook.jpg",
-        episodes: [
-          {
-            id: 1,
-            title: "Betrayal",
-            thumbnail: "/series/thumbnails/ep2.jpg",
-            description:
-              "Alliances shift as new enemies rise and Tariq faces deadly choices.",
-          },
-        ],
-      },
-      // ➕ Add S3–S9
-    ],
-  },
-  {
-    id: 2,
-    title: "Breaking Bad",
-    poster: "/movieposters/breakingbad.jpg",
-    description:
-      "Walter White transforms from a chemistry teacher to a feared drug kingpin.",
-    seasons: [
-      {
-        id: 1,
-        season: "S1",
-        poster: "/movieposters/breakingbad.jpg",
-        episodes: [
-          {
-            id: 1,
-            title: "Pilot",
-            thumbnail: "/series/thumbnails/bb-ep1.jpg",
-            description:
-              "Walter White, a high school chemistry teacher, is diagnosed with cancer.",
-          },
-        ],
-      },
-    ],
-  },
-];
+    fetchMovies();
+  }, []);
 
-export default function Series() {
-  const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
-  const [selectedSeason, setSelectedSeason] = useState<Season | null>(null);
+  // Related movies (same genre if available)
+  const relatedMovies = selectedMovie
+    ? movies.filter(
+        (m) =>
+          m.genre === selectedMovie.genre && m.id !== selectedMovie.id
+      )
+    : [];
 
   return (
     <>
-    <Header />
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white p-6 pt-24">
-     
-
-      {/* Series Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-        {seriesList.map((series) => (
-          <button
-            key={series.id}
-            onClick={() => setSelectedSeries(series)}
-            className="relative group overflow-hidden rounded-2xl shadow-lg transition transform hover:scale-105"
-          >
-            <Image
-              src={series.poster}
-              alt={series.title}
-              width={300}
-              height={450}
-              className="w-full h-auto object-cover"
-            />
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-              <span className="text-purple-400 font-bold text-lg">
-                View Seasons
-              </span>
-            </div>
-          </button>
-        ))}
-      </div>
-
-      {/* Modal for Series -> Seasons */}
-      {selectedSeries && !selectedSeason && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-lg flex items-center justify-center z-50">
-          <div className="bg-white/10 border border-white/20 rounded-2xl p-6 max-w-3xl w-full shadow-xl relative">
-            {/* Close */}
-            <button
-              onClick={() => setSelectedSeries(null)}
-              className="absolute top-3 right-3 text-gray-300 hover:text-purple-400 transition"
+      <Header />
+      <section className="w-full py-8">
+        {/* Movie List (scrollable) */}
+        <div className="flex gap-6 overflow-x-auto scrollbar-hide">
+          {movies.map((movie) => (
+            <motion.div
+              key={movie.id}
+              whileHover={{ scale: 1.02 }}
+              className="w-[180px] flex-shrink-0 bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer"
+              onClick={() => setSelectedMovie(movie)}
             >
-              <X size={22} />
-            </button>
-
-            <h2 className="text-2xl font-bold text-purple-400 mb-4">
-              {selectedSeries.title}
-            </h2>
-            <p className="text-sm text-gray-300 mb-6">
-              {selectedSeries.description}
-            </p>
-
-            {/* Seasons Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-              {selectedSeries.seasons.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => setSelectedSeason(s)}
-                  className="relative group overflow-hidden rounded-2xl shadow-lg transition transform hover:scale-105"
-                >
-                  <Image
-                    src={s.poster}
-                    alt={s.season}
-                    width={300}
-                    height={450}
-                    className="w-full h-auto object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                    <span className="text-purple-400 font-bold text-lg">
-                      {s.season}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
+              <Image
+                src={movie.poster_url}
+                alt={movie.title}
+                width={180}
+                height={260}
+                className="object-cover h-64 w-full"
+              />
+              
+            </motion.div>
+          ))}
         </div>
-      )}
 
-      {/* Modal for Season -> Episodes */}
-      {selectedSeason && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-lg flex items-center justify-center z-50">
-          <div className="bg-white/10 border border-white/20 rounded-2xl p-6 max-w-2xl w-full shadow-xl relative">
-            {/* Close */}
-            <button
-              onClick={() => setSelectedSeason(null)}
-              className="absolute top-3 right-3 text-gray-300 hover:text-purple-400 transition"
+        {/* Expanded Details */}
+        <AnimatePresence>
+          {selectedMovie && (
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+              className="fixed inset-0 bg-black/70 backdrop-blur-lg z-50 p-4 overflow-y-auto"
             >
-              <X size={22} />
-            </button>
-
-            <h2 className="text-2xl font-bold text-purple-400 mb-4">
-              {selectedSeason.season}
-            </h2>
-
-            {/* Episodes */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {selectedSeason.episodes.map((ep) => (
-                <div
-                  key={ep.id}
-                  className="bg-white/5 rounded-xl overflow-hidden border border-white/10 hover:bg-white/10 transition"
-                >
-                  <Image
-                    src={ep.thumbnail}
-                    alt={ep.title}
-                    width={400}
-                    height={250}
-                    className="w-full h-32 object-cover"
-                  />
-                  <div className="p-3">
-                    <h3 className="text-md font-semibold text-cyan-300">
-                      {ep.title}
-                    </h3>
-                    <p className="text-xs text-gray-300 mt-1">
-                      {ep.description}
+              <div className="bg-white/10 rounded-2xl shadow-2xl max-w-5xl w-full mx-auto p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10">
+                <Image
+                  src={selectedMovie.poster_url}
+                  alt={selectedMovie.title}
+                  width={300}
+                  height={450}
+                  className="rounded-xl object-cover"
+                />
+                <div className="flex flex-col justify-between flex-1">
+                  <div>
+                    <h2 className="text-3xl font-bold text-white mb-2">
+                      {selectedMovie.title}
+                    </h2>
+                    <p className="text-gray-300 mb-4">
+                      {selectedMovie.description}
                     </p>
+                    <p className="text-sm opacity-70">{selectedMovie.release_date}</p>
+            <p className="text-cyan-400 font-semibold">⭐ {selectedMovie.rating}</p>
                   </div>
+                  <div className="flex gap-4 mb-6">
+                    <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
+                      <Play size={18} />
+                    </button>
+                    <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
+                      <Bookmark size={18} />
+                    </button>
+                  </div>
+                  {relatedMovies.length > 0 && (
+                    <div>
+                      <h3 className="text-xl font-bold text-white mb-3">
+                        More like this
+                      </h3>
+                      <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
+                        {relatedMovies.map((m) => (
+                          <div
+                            key={m.id}
+                            className="flex-shrink-0 snap-start"
+                          >
+                            <Image
+                              src={m.poster_url}
+                              alt={m.title}
+                              width={120}
+                              height={180}
+                              className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
+                              onClick={() => setSelectedMovie(m)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+                <button
+                  className="absolute top-4 right-4 text-white text-2xl"
+                  onClick={() => setSelectedMovie(null)}
+                >
+                  ✕
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </section>
     </>
   );
-}
+};
+
+export default Movies;
