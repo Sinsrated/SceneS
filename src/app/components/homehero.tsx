@@ -16,10 +16,24 @@ type Movie = {
   id: number;
   title: string;
   year: number;
-  genre: string; // now a combined string like "Sci-Fi • Thriller"
+  genre: string;
   description: string;
   poster: string;
   background: string;
+};
+
+type SupabaseMovie = {
+  id: number;
+  title: string;
+  year: number;
+  description: string;
+  poster_url: string;
+  backdrop_url?: string;
+  movie_genres: {
+    genres: {
+      name: string;
+    } | null;
+  }[];
 };
 
 const HeroCarousel = () => {
@@ -35,43 +49,43 @@ const HeroCarousel = () => {
   useEffect(() => {
     const fetchMovies = async () => {
       try {
-       const { data: moviesData, error } = await supabase
-  .from("movies")
-  .select(`
-    id,
-    title,
-    description,
-    poster_url,
-    backdrop_url,
-    year,
-    movie_genres (
-      genres ( name )
-    )
-  `);
+        const { data: moviesData, error } = await supabase
+          .from("movies")
+          .select(`
+            id,
+            title,
+            description,
+            poster_url,
+            backdrop_url,
+            year,
+            movie_genres (
+              genres ( name )
+            )
+          `);
 
-if (error) {
-  console.error("Error fetching movies:", error.message);
-  return;
-}
+        if (error) {
+          console.error("Error fetching movies:", error.message);
+          return;
+        }
 
-const formatted: Movie[] =
-  moviesData?.map((m: any) => ({
-    id: m.id,
-    title: m.title,
-    year: m.year, // ✅ directly from your DB now
-    description: m.description,
-    poster: m.poster_url,
-    background: m.backdrop_url || m.poster_url,
-    genre: m.movie_genres
-      .map((mg: any) => mg.genres?.name)
-      .filter(Boolean)
-      .join(" • "),
-  })) || [];
+        const formatted: Movie[] =
+          (moviesData as SupabaseMovie[])?.map((m) => ({
+            id: m.id,
+            title: m.title,
+            year: m.year,
+            description: m.description,
+            poster: m.poster_url,
+            background: m.backdrop_url || m.poster_url,
+            genre: m.movie_genres
+              .map((mg) => mg.genres?.name)
+              .filter(Boolean)
+              .join(" • "),
+          })) || [];
 
-setMovies(formatted);
-
-      } catch (err: any) {
-        console.error("Unexpected fetch error:", err.message);
+        setMovies(formatted);
+      } catch (err) {
+        const error = err as Error;
+        console.error("Unexpected fetch error:", error.message);
       }
     };
 
@@ -122,7 +136,7 @@ setMovies(formatted);
   if (!movie) {
     return (
       <section className="w-full h-[50vh] flex items-center justify-center text-white">
-       
+        {/* No content to display */}
       </section>
     );
   }
