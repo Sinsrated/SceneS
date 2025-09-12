@@ -4,37 +4,20 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bookmark, Play } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "../lib/supabaseClient";
 
-// --- Supabase Client ---
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-type Movie = {
+interface Movie {
   id: number;
   title: string;
-  year: number;
-  genre: string;
-  description: string;
-  poster: string;
-  background: string;
-};
-
-type SupabaseMovie = {
-  id: number;
-  title: string;
-  year: number;
-  description: string;
   poster_url: string;
-  backdrop_url?: string;
-  movie_genres: {
-    genres: {
-      name: string;
-    } | null;
-  }[];
-};
+  backdrop_url: string;
+  year: string;
+  description: string;
+
+  rating: number;
+  genre: string[];       
+  trailer_url: string;
+}
 
 const HeroCarousel = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -45,64 +28,33 @@ const HeroCarousel = () => {
   const mobileScrollRef = useRef<HTMLDivElement | null>(null);
   const desktopScrollRef = useRef<HTMLDivElement | null>(null);
 
-  // Fetch movies with genres
+  // ✅ Fetch movies from Supabase
   useEffect(() => {
     const fetchMovies = async () => {
-      try {
-        const { data: moviesData, error } = await supabase
-          .from("movies")
-          .select(`
-            id,
-            title,
-            description,
-            poster_url,
-            backdrop_url,
-            year,
-            movie_genres (
-              genres ( name )
-            )
-          `);
+      const { data, error } = await supabase
+        .from("movies")
+        .select("*"); // fetch all columns including genre jsonb and trailer_url
 
-        if (error) {
-          console.error("Error fetching movies:", error.message);
-          return;
-        }
-
-        const formatted: Movie[] =
-          (moviesData as SupabaseMovie[])?.map((m) => ({
-            id: m.id,
-            title: m.title,
-            year: m.year,
-            description: m.description,
-            poster: m.poster_url,
-            background: m.backdrop_url || m.poster_url,
-            genre: m.movie_genres
-              .map((mg) => mg.genres?.name)
-              .filter(Boolean)
-              .join(" • "),
-          })) || [];
-
-        setMovies(formatted);
-      } catch (err) {
-        const error = err as Error;
-        console.error("Unexpected fetch error:", error.message);
+      if (error) {
+        console.error("Error fetching movies:", error.message);
+      } else if (data) {
+        setMovies(data as Movie[]);
       }
     };
 
     fetchMovies();
   }, []);
 
-  const movie = movies[current];
-
+  // Related movies based on overlapping genres
   const relatedMovies = selectedMovie
     ? movies.filter(
         (m) =>
-          m.genre.split("•")[0].trim() ===
-            selectedMovie.genre.split("•")[0].trim() && m.id !== selectedMovie.id
+          m.id !== selectedMovie.id &&
+          m.genre.some((g) => selectedMovie.genre.includes(g))
       )
     : [];
 
-  // --- Auto-play ---
+  // --- Auto-play carousel ---
   useEffect(() => {
     if (!movies.length) return;
     const interval = setInterval(() => {
@@ -133,100 +85,100 @@ const HeroCarousel = () => {
     if (index !== current) setCurrent(index);
   };
 
-  if (!movie) {
+  if (!movies.length) {
     return (
       <section className="w-full h-[50vh] flex items-center justify-center text-white">
-        {/* No content to display */}
+        Loading movies...
       </section>
     );
   }
 
+  const movie = movies[current];
+
   return (
-    <section className="relative w-full px-5 py-16 flex flex-col items-center overflow-hidden">
-      {/* Background */}
-      {movie?.background && (
-        <>
-          <div
-            className="absolute top-0 left-1/2 -translate-x-1/2 w-[95%] bg-cover bg-center opacity-40 blur-lg transition-all duration-700 rounded-2xl h-[50vh]"
-            style={{ backgroundImage: `url(${movie.background})` }}
+    <section className="relative w-full px-5 py-4 flex flex-col items-center overflow-hidden">
+    
+     {/* Mobile Carousel */}
+<div
+  ref={mobileScrollRef}
+  onScroll={() => handleScroll(mobileScrollRef.current)}
+  className="relative z-10 top-5 flex overflow-x-auto snap-x snap-mandatory w-full scrollbar-hide scroll-smooth md:hidden"
+>
+  {movies.map((movie, index) => (
+    <motion.div
+      key={movie.id}
+      ref={index === current ? cardRef : null}
+      className="w-full flex-shrink-0 snap-center flex justify-center px-2"
+      onClick={() => setSelectedMovie(movie)}
+    >
+      <div className="relative w-full h-44 flex items-center justify-center overflow-hidden rounded-2xl">
+        {/* Background */}
+        {movie.backdrop_url && (
+          <>
+            <div
+              className="absolute top-0 left-0 w-full h-full bg-cover bg-center opacity-40 blur-lg transition-all duration-500"
+              style={{ backgroundImage: `url(${movie.backdrop_url})` }}
+            />
+            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-black/50 via-black/20 to-black/60 rounded-2xl" />
+          </>
+        )}
+
+        {/* Poster or content (optional) */}
+        <div className="flex gap-4 items-center relative z-10 bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer p-2">
+          <Image
+            src={movie.poster_url}
+            alt={movie.title}
+            width={100}
+            height={150}
+            className="object-cover h-44 w-32"
           />
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[100%] bg-gradient-to-b from-black/60 via-black/40 to-black/80 rounded-2xl h-[50vh]" />
-        </>
-      )}
-
-      {/* Mobile Carousel */}
-      <div
-        ref={mobileScrollRef}
-        onScroll={() => handleScroll(mobileScrollRef.current)}
-        className="relative z-10 top-5 flex overflow-x-auto snap-x snap-mandatory w-full scrollbar-hide scroll-smooth md:hidden"
-      >
-        {movies.map((movie, index) => (
-          <motion.div
-            key={movie.id}
-            ref={index === current ? cardRef : null}
-            className="w-full flex-shrink-0 snap-center flex justify-center px-2"
-            onClick={() => setSelectedMovie(movie)}
-          >
-            <div className="flex gap-4 items-center bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer">
-              <Image
-                src={movie.poster}
-                alt={movie.title}
-                width={100}
-                height={150}
-                className="object-cover h-44 w-32"
-              />
-              <div className="p-4 flex flex-col">
-                <h3 className="text-lg font-semibold text-white">
-                  {movie.title}
-                </h3>
-                <p className="text-xs text-gray-300 mt-1 line-clamp-2">
-                  {movie.description}
-                </p>
-                <p className="text-[10px] text-gray-400 mt-1">
-                  {movie.year} • {movie.genre}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        ))}
+          <div className="p-2 flex flex-col">
+            <h3 className="text-lg font-semibold text-white">{movie.title}</h3>
+            <p className="text-xs text-gray-300 mt-1 line-clamp-2">{movie.description}</p>
+            <p className="text-[10px] text-gray-400 mt-1">{movie.year} • {movie.genre.join(", ")}</p>
+          </div>
+        </div>
       </div>
+    </motion.div>
+  ))}
+</div>
 
-      {/* Desktop Carousel */}
-      <div
-        ref={desktopScrollRef}
-        onScroll={() => handleScroll(desktopScrollRef.current)}
-        className="hidden md:flex relative z-10 top-5 overflow-x-auto snap-x snap-mandatory w-[80%] scrollbar-hide scroll-smooth"
-      >
-        {movies.map((movie, index) => (
-          <motion.div
-            key={movie.id}
-            ref={index === current ? cardRef : null}
-            className="flex-shrink-0 snap-center w-full cursor-pointer hover:scale-105 transition"
-            onClick={() => setSelectedMovie(movie)}
-          >
-            <div className="flex items-center bg-white/5 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden">
-              <Image
-                src={movie.poster}
-                alt={movie.title}
-                width={350}
-                height={500}
-                className="object-cover h-[45vh] w-[30vh]"
-              />
-              <div className="p-4 flex flex-col">
-                <h3 className="text-xl font-semibold text-white">
-                  {movie.title}
-                </h3>
-                <p className="text-sm text-gray-300 mt-2 line-clamp-3">
-                  {movie.description}
-                </p>
-                <p className="text-xs text-gray-400 mt-2">
-                  {movie.year} • {movie.genre}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        ))}
+{/* Desktop Carousel */}
+<div
+  ref={desktopScrollRef}
+  onScroll={() => handleScroll(desktopScrollRef.current)}
+  className="hidden md:flex relative z-10 overflow-x-auto snap-x snap-mandatory w-full max-w-[95vw] mx-auto scrollbar-hide scroll-smooth"
+>
+  {movies.map((movie, index) => (
+    <motion.div
+      key={movie.id}
+      ref={index === current ? cardRef : null}
+      className="flex-shrink-0 snap-center w-full cursor-pointer hover:scale-105 transition"
+      onClick={() => setSelectedMovie(movie)}
+    >
+      <div className="relative w-full h-[75vh] overflow-hidden rounded-2xl">
+        {/* Background */}
+        {movie.backdrop_url && (
+          <>
+            <div
+              className="absolute inset-0 w-full h-full bg-cover bg-bottom  transition-all duration-500 rounded-2xl"
+              style={{ backgroundImage: `url(${movie.backdrop_url})` }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/80 rounded-2xl" />
+          </>
+        )}
+
+        {/* Overlay Text */}
+        <div className="absolute bottom-6 left-6 z-10 text-white max-w-[70%]">
+          <h3 className="text-2xl font-bold">{movie.title}</h3>
+          <p className="text-sm text-gray-200 line-clamp-3">{movie.description}</p>
+        </div>
       </div>
+    </motion.div>
+  ))}
+</div>
+
+
 
       {/* Vertical Dots */}
       <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-10">
@@ -247,7 +199,7 @@ const HeroCarousel = () => {
                 });
               }
             }}
-            className={`w-3 h-3 rounded-full transition-all ${
+            className={`w-2 h-2 rounded-full transition-all ${
               current === index ? "bg-red-500 scale-125" : "bg-gray-500/50"
             }`}
           />
@@ -265,7 +217,7 @@ const HeroCarousel = () => {
           >
             <div className="bg-white/10 rounded-2xl shadow-2xl max-w-5xl w-full mx-auto p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10">
               <Image
-                src={selectedMovie.poster}
+                src={selectedMovie.poster_url}
                 alt={selectedMovie.title}
                 width={300}
                 height={450}
@@ -279,15 +231,26 @@ const HeroCarousel = () => {
                   <p className="text-gray-300 mb-4">
                     {selectedMovie.description}
                   </p>
+                  <p className="text-sm text-gray-300 mb-2">
+                    {selectedMovie.year} • {selectedMovie.genre.join(", ")}
+                  </p>
                 </div>
                 <div className="flex gap-4 mb-6">
+                  {selectedMovie.trailer_url && (
+                    <a
+                      href={selectedMovie.trailer_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition"
+                    >
+                      <Play size={18} /> Watch Trailer
+                    </a>
+                  )}
                   <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                    <Play size={18} />
-                  </button>
-                  <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                    <Bookmark size={18} />
+                    <Bookmark size={18} /> Save
                   </button>
                 </div>
+
                 {relatedMovies.length > 0 && (
                   <div>
                     <h3 className="text-xl font-bold text-white mb-3">
@@ -297,11 +260,11 @@ const HeroCarousel = () => {
                       {relatedMovies.map((m) => (
                         <div key={m.id} className="flex-shrink-0 snap-start">
                           <Image
-                            src={m.poster}
+                            src={m.poster_url}
                             alt={m.title}
                             width={120}
                             height={180}
-                            className="rounded-lg object-cover cursor-pointer hover:scale-105 md:hover:scale-105 transition"
+                            className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
                             onClick={() => setSelectedMovie(m)}
                           />
                         </div>

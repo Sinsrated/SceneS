@@ -2,12 +2,21 @@
 
 import { Home, Film, Tv, Calendar, Settings, Search } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { supabase } from "../lib/supabaseClient";
+
+
 
 const Navbar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+
+  // 🔍 Search state
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   const navItems = [
     { name: "Home", icon: <Home size={22} />, href: "/home" },
@@ -23,23 +32,74 @@ const Navbar = () => {
   // 🔄 Auto-hide loading after navigation finishes
   useEffect(() => {
     if (loading) {
-      const timeout = setTimeout(() => setLoading(false), 1200); // 1.2s cinematic delay
+      const timeout = setTimeout(() => setLoading(false), 1200);
       return () => clearTimeout(timeout);
     }
   }, [loading]);
 
   // 🧭 Handle navigation with loading effect
-  const handleNav = (href: string) => {
-    setLoading(true);
-    router.push(href);
-  };
+const handleNav = (href: string) => {
+  setLoading(true);
+  router.push(href);
+};
+
+// 🔍 Handle Enter key
+const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  if (suggestions.length > 0) {
+    // Take the first matching suggestion
+    const first = suggestions[0];
+    handleNav(`/movies/${first.id}`);
+    setShowDropdown(false);
+    setQuery("");
+  }
+};
+
+
+  // 🔍 Fetch movie suggestions
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (!query.trim()) {
+        setSuggestions([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("movies")
+        .select("id, title, year, poster_url")
+        .ilike("title", `%${query}%`) // case-insensitive search
+        .limit(6);
+
+      if (!error && data) {
+        setSuggestions(data);
+        setShowDropdown(true);
+      }
+    };
+
+    const debounce = setTimeout(fetchSuggestions, 300); // debounce typing
+    return () => clearTimeout(debounce);
+  }, [query]);
+
+  // ❌ Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <>
-      {/* 🌐 Desktop Glassmorphism Top Navbar */}
-      <nav className="hidden md:flex fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-6xl bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl px-6 py-3 items-center justify-between shadow-lg z-50">
+      {/* 🌐 Desktop Navbar */}
+      <nav className="hidden md:flex fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-6xl bg-white/5 backdrop-blur-lg border border-white/20 rounded-2xl px-6 py-3 items-center justify-between shadow-lg z-50">
         {/* Logo */}
-        <div className="text-red-500 font-bold text-xl cursor-pointer" onClick={() => handleNav("/home")}>
+        <div
+          className="text-red-500 font-bold text-xl cursor-pointer"
+          onClick={() => handleNav("/home")}
+        >
           ScenecS
         </div>
 
@@ -62,16 +122,51 @@ const Navbar = () => {
           ))}
         </ul>
 
-        {/* Search Bar + Profile */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-3 py-2 w-64">
-            <Search size={18} className="text-gray-400 mr-2" />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="bg-transparent outline-none text-white text-sm flex-1"
-            />
+        {/* Search + Settings */}
+        <div className="flex items-center gap-4" ref={searchRef}>
+          <div className="relative w-64">
+            <div className="flex items-center bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-3 py-2">
+              <Search size={18} className="text-gray-400 mr-2" />
+              <input
+                type="text"
+                placeholder="Search..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="bg-transparent outline-none text-white text-sm flex-1"
+                onFocus={() => query && setShowDropdown(true)}
+              />
+            </div>
+
+            {/* Suggestions dropdown */}
+            {showDropdown && suggestions.length > 0 && (
+              <ul className="absolute top-12 left-0 w-full bg-black/90 border border-white/20 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+                {suggestions.map((movie) => (
+                  <li
+                    key={movie.id}
+                    onClick={() => {
+                      handleNav(`/movies/${movie.id}`);
+                      setShowDropdown(false);
+                      setQuery("");
+                    }}
+                    className="flex items-center gap-3 p-2 cursor-pointer hover:bg-white/10 transition"
+                  >
+                    <img
+                      src={movie.poster_url}
+                      alt={movie.title}
+                      className="w-10 h-14 object-cover rounded"
+                    />
+                    <div>
+                      <p className="text-sm text-white font-medium">
+                        {movie.title}
+                      </p>
+                      <p className="text-xs text-gray-400">{movie.year}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
+
           <button
             onClick={() => handleNav("/setting")}
             className={`p-2 rounded-full transition ${
@@ -93,14 +188,48 @@ const Navbar = () => {
         >
           SceneS
         </div>
-        <div className="flex-1 ml-4">
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-3 py-2 flex items-center">
-            <Search size={18} className="text-gray-400 mr-2" />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="bg-transparent outline-none text-white text-sm flex-1"
-            />
+        <div className="flex-1 ml-4" ref={searchRef}>
+          <div className="relative">
+            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-3 py-2 flex items-center">
+              <Search size={18} className="text-gray-400 mr-2" />
+              <input
+                type="text"
+                placeholder="Search..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="bg-transparent outline-none text-white text-sm flex-1"
+                onFocus={() => query && setShowDropdown(true)}
+              />
+            </div>
+
+            {/* Mobile suggestions */}
+            {showDropdown && suggestions.length > 0 && (
+              <ul className="absolute top-12 left-0 w-full bg-black/90 border border-white/20 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+                {suggestions.map((movie) => (
+                  <li
+                    key={movie.id}
+                    onClick={() => {
+                      handleNav(`/movies/${movie.id}`);
+                      setShowDropdown(false);
+                      setQuery("");
+                    }}
+                    className="flex items-center gap-3 p-2 cursor-pointer hover:bg-white/10 transition"
+                  >
+                    <img
+                      src={movie.poster_url}
+                      alt={movie.title}
+                      className="w-10 h-14 object-cover rounded"
+                    />
+                    <div>
+                      <p className="text-sm text-white font-medium">
+                        {movie.title}
+                      </p>
+                      <p className="text-xs text-gray-400">{movie.year}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </header>

@@ -13,8 +13,9 @@ export default function Movies() {
   
    return(
      <>
-    <Header /> 
+    
      <HeroCarousel /> 
+     <Header />
      <Trending />
      <LatestMovies />
      <LatestSeries />

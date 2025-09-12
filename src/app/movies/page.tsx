@@ -11,7 +11,7 @@ interface Movie {
   title: string;
   poster_url: string; 
   description: string;
-  release_date: string;
+  year: string;
   rating: number;
   
   genre?: string;
@@ -93,7 +93,7 @@ const Movies = () => {
                     <p className="text-gray-300 mb-4">
                       {selectedMovie.description}
                     </p>
-                    <p className="text-sm opacity-70">{selectedMovie.release_date}</p>
+                    <p className="text-sm opacity-70">{selectedMovie.year}</p>
             <p className="text-cyan-400 font-semibold">⭐ {selectedMovie.rating}</p>
                   </div>
                   <div className="flex gap-4 mb-6">

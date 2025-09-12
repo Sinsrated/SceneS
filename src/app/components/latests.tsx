@@ -11,7 +11,7 @@ interface Movie {
   title: string;
   poster_url: string; 
   description: string;
-  release_date: string;
+  year: string;
   rating: number;
   
   genre?: string;
@@ -54,7 +54,7 @@ const Latestseries = () => {
             <motion.div
               key={movie.id}
               whileHover={{ scale: 1.02 }}
-              className="w-[180px] flex-shrink-0 bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer"
+              className=" flex-shrink-0 bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer"
               onClick={() => setSelectedMovie(movie)}
             >
               <Image
@@ -62,7 +62,7 @@ const Latestseries = () => {
                 alt={movie.title}
                 width={180}
                 height={260}
-                className="object-cover h-64 w-full"
+                className="object-cover h-60 w-40"
               />
              
             </motion.div>
@@ -94,7 +94,7 @@ const Latestseries = () => {
                     <p className="text-gray-300 mb-4">
                       {selectedMovie.description}
                     </p>
-                    <p className="text-sm opacity-70">{selectedMovie.release_date}</p>
+                    <p className="text-sm opacity-70">{selectedMovie.year}</p>
             <p className="text-cyan-400 font-semibold">⭐ {selectedMovie.rating}</p>
                   </div>
                   <div className="flex gap-4 mb-6">

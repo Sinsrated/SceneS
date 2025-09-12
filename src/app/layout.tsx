@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Header from "./components/Header";
+import { MovieProvider } from "./components/context/movieContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,11 +24,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {/* ✅ Header inside body so it doesn’t interfere with pages */}
-       
-
-        {/* Page content */}
-        <main>{children}</main>
+     
+        <MovieProvider>{children}</MovieProvider>
       </body>
     </html>
   );

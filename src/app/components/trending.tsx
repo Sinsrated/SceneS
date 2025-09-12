@@ -1,20 +1,20 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import  { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Bookmark } from "lucide-react";
-import Header from "../components/Header";
 import { supabase } from "../lib/supabaseClient"; 
 
+// ✅ Movie interface with genre as array
 interface Movie {
   id: number;
   title: string;
   poster_url: string; 
   description: string;
-  release_date: string;
+  year: string;
   rating: number;
-  
-  genre?: string;
+  genre: string[];       // Supabase jsonb → array
+  trailer_url: string;
 }
 
 const Trending = () => {
@@ -35,26 +35,28 @@ const Trending = () => {
     fetchMovies();
   }, []);
 
-  // Related movies (same genre if available)
+  // ✅ Related movies by overlapping genre
   const relatedMovies = selectedMovie
     ? movies.filter(
         (m) =>
-          m.genre === selectedMovie.genre && m.id !== selectedMovie.id
+          m.id !== selectedMovie.id &&
+          m.genre.some((g) => selectedMovie.genre.includes(g)) // ✅ overlap check
       )
     : [];
 
   return (
     <>
-      <Header />
+      
       <section className="w-full py-8">
-         <h2 className="text-2xl font-bold text-white mb-6">Trending</h2>
+        <h2 className="text-2xl font-bold text-white mb-6">Trending</h2>
+        
         {/* Movie List (scrollable) */}
         <div className="flex gap-6 overflow-x-auto scrollbar-hide">
           {movies.map((movie) => (
             <motion.div
               key={movie.id}
               whileHover={{ scale: 1.02 }}
-              className="w-[180px] flex-shrink-0 bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer"
+              className=" flex-shrink-0 bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer"
               onClick={() => setSelectedMovie(movie)}
             >
               <Image
@@ -62,9 +64,8 @@ const Trending = () => {
                 alt={movie.title}
                 width={180}
                 height={260}
-                className="object-cover h-64 w-full"
+                className="object-cover h-60 w-40"
               />
-             
             </motion.div>
           ))}
         </div>
@@ -79,6 +80,8 @@ const Trending = () => {
               className="fixed inset-0 bg-black/70 backdrop-blur-lg z-50 p-4 overflow-y-auto"
             >
               <div className="bg-white/10 rounded-2xl shadow-2xl max-w-5xl w-full mx-auto p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10">
+                
+                {/* Poster */}
                 <Image
                   src={selectedMovie.poster_url}
                   alt={selectedMovie.title}
@@ -86,6 +89,8 @@ const Trending = () => {
                   height={450}
                   className="rounded-xl object-cover"
                 />
+
+                {/* Info */}
                 <div className="flex flex-col justify-between flex-1">
                   <div>
                     <h2 className="text-3xl font-bold text-white mb-2">
@@ -94,17 +99,35 @@ const Trending = () => {
                     <p className="text-gray-300 mb-4">
                       {selectedMovie.description}
                     </p>
-                    <p className="text-sm opacity-70">{selectedMovie.release_date}</p>
-            <p className="text-cyan-400 font-semibold">⭐ {selectedMovie.rating}</p>
+                    <p className="text-sm opacity-70">
+                      {selectedMovie.year}
+                    </p>
+                    <p className="text-cyan-400 font-semibold">
+                      ⭐ {selectedMovie.rating}
+                    </p>
+                    <p className="text-sm text-gray-300 mt-2">
+                      🎭 {selectedMovie.genre.join(", ")}
+                    </p>
                   </div>
+
+                  {/* Buttons */}
                   <div className="flex gap-4 mb-6">
+                    {selectedMovie.trailer_url && (
+                      <a
+                        href={selectedMovie.trailer_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition"
+                      >
+                        <Play size={18} /> Watch Trailer
+                      </a>
+                    )}
                     <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                      <Play size={18} />
-                    </button>
-                    <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                      <Bookmark size={18} />
+                      <Bookmark size={18} /> Save
                     </button>
                   </div>
+
+                  {/* More Like This */}
                   {relatedMovies.length > 0 && (
                     <div>
                       <h3 className="text-xl font-bold text-white mb-3">
@@ -130,6 +153,8 @@ const Trending = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Close Button */}
                 <button
                   className="absolute top-4 right-4 text-white text-2xl"
                   onClick={() => setSelectedMovie(null)}
