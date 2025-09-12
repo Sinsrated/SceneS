@@ -4,8 +4,15 @@ import { Home, Film, Tv, Calendar, Settings, Search } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabaseClient";
+import Image from 'next/image';
 
 
+interface MovieSuggestion {
+  id: number;
+  title: string;
+  year: string;
+  poster_url: string;
+}
 
 const Navbar = () => {
   const pathname = usePathname();
@@ -14,7 +21,7 @@ const Navbar = () => {
 
   // 🔍 Search state
   const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<MovieSuggestion[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -38,22 +45,22 @@ const Navbar = () => {
   }, [loading]);
 
   // 🧭 Handle navigation with loading effect
-const handleNav = (href: string) => {
-  setLoading(true);
-  router.push(href);
-};
+  const handleNav = (href: string) => {
+    setLoading(true);
+    router.push(href);
+  };
 
-// 🔍 Handle Enter key
-const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault();
-  if (suggestions.length > 0) {
-    // Take the first matching suggestion
-    const first = suggestions[0];
-    handleNav(`/movies/${first.id}`);
-    setShowDropdown(false);
-    setQuery("");
-  }
-};
+  // 🔍 Handle Enter key
+  // const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  //   e.preventDefault();
+  //   if (suggestions.length > 0) {
+  //     // Take the first matching suggestion
+  //     const first = suggestions[0];
+  //     handleNav(`/movies/${first.id}`);
+  //     setShowDropdown(false);
+  //     setQuery("");
+  //   }
+  // };
 
 
   // 🔍 Fetch movie suggestions
@@ -150,10 +157,12 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
                     }}
                     className="flex items-center gap-3 p-2 cursor-pointer hover:bg-white/10 transition"
                   >
-                    <img
+                    <Image
                       src={movie.poster_url}
                       alt={movie.title}
-                      className="w-10 h-14 object-cover rounded"
+                      width={40}
+                      height={56}
+                      className="object-cover rounded"
                     />
                     <div>
                       <p className="text-sm text-white font-medium">
@@ -215,10 +224,12 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
                     }}
                     className="flex items-center gap-3 p-2 cursor-pointer hover:bg-white/10 transition"
                   >
-                    <img
+                    <Image
                       src={movie.poster_url}
                       alt={movie.title}
-                      className="w-10 h-14 object-cover rounded"
+                      width={40}
+                      height={56}
+                      className="object-cover rounded"
                     />
                     <div>
                       <p className="text-sm text-white font-medium">
