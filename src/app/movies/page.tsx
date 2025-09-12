@@ -6,6 +6,7 @@ import { Play, Bookmark } from "lucide-react";
 import Header from "../components/Header";
 import { supabase } from "../lib/supabaseClient"; 
 
+
 interface Movie {
   id: number;
   title: string;
@@ -47,13 +48,14 @@ const Movies = () => {
     <>
       <Header />
       <section className="w-full py-8">
+        
         {/* Movie List (scrollable) */}
         <div className="flex gap-6 overflow-x-auto scrollbar-hide">
           {movies.map((movie) => (
             <motion.div
               key={movie.id}
               whileHover={{ scale: 1.02 }}
-              className="w-[180px] flex-shrink-0 bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer"
+              className=" flex-shrink-0 bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer"
               onClick={() => setSelectedMovie(movie)}
             >
               <Image
@@ -61,7 +63,7 @@ const Movies = () => {
                 alt={movie.title}
                 width={180}
                 height={260}
-                className="object-cover h-64 w-full"
+                className="object-cover h-60 w-40"
               />
              
             </motion.div>
