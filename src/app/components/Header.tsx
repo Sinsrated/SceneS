@@ -101,7 +101,7 @@ const Navbar = () => {
   return (
     <>
       {/* 🌐 Desktop Navbar */}
-      <nav className="hidden md:flex fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-6xl bg-white/5 backdrop-blur-lg border border-white/20 rounded-2xl px-6 py-3 items-center justify-between shadow-lg z-50">
+      <nav className="hidden md:flex fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-6xl bg-white/5 backdrop-blur-5g border border-white/20 rounded-2xl px-6 py-3 items-center justify-between shadow-lg z-50">
         {/* Logo */}
         <div
           className="text-red-500 font-bold text-xl cursor-pointer"
@@ -199,7 +199,7 @@ const Navbar = () => {
         </div>
         <div className="flex-1 ml-4" ref={searchRef}>
           <div className="relative">
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-3 py-2 flex items-center">
+            <div className="bg-white/5 backdrop-blur-5g border border-white/20 rounded-full px-3 py-2 flex items-center">
               <Search size={18} className="text-gray-400 mr-2" />
               <input
                 type="text"
@@ -246,7 +246,7 @@ const Navbar = () => {
       </header>
 
       {/* 📱 Mobile Bottom Navbar */}
-      <nav className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl px-4 py-3 flex justify-around items-center shadow-lg z-50">
+      <nav className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white/5 backdrop-blur-5g border border-white/20 rounded-2xl px-4 py-3 flex justify-around items-center shadow-lg z-50">
         {navItems.map((item) => (
           <button
             key={item.name}
