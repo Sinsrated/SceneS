@@ -8,7 +8,7 @@ import { supabase } from "../lib/supabaseClient";
 
 interface Item {
   id: number;
-  type: "movie" | "series"; // to distinguish movies and series
+  type: "movie" | "series";
   title: string;
   poster_url: string;
   backdrop_url: string;
@@ -22,6 +22,25 @@ interface Item {
   seasons?: number;
 }
 
+// Define Supabase row types
+interface MovieRow {
+  id: number;
+  title: string;
+  poster_url: string;
+  backdrop_url: string;
+  year: string;
+  description: string;
+  watch_url?: string;
+  trailer_url?: string;
+  rating?: number;
+  genre: string[];
+}
+
+interface SeriesRow extends MovieRow {
+  episodes?: number;
+  seasons?: number;
+}
+
 const HeroCarousel = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
@@ -31,37 +50,63 @@ const HeroCarousel = () => {
   const mobileScrollRef = useRef<HTMLDivElement | null>(null);
   const desktopScrollRef = useRef<HTMLDivElement | null>(null);
 
-  // Fetch movies + series
+  // Fetch movies + series from Supabase
   useEffect(() => {
     const fetchData = async () => {
-      const { data: movies, error: movieErr } = await supabase
-        .from("movies")
-        .select("*");
-      if (movieErr) console.error("Movies fetch error:", movieErr.message);
+  const { data: moviesData, error: movieErr } = await supabase
+    .from("movies")
+    .select("*");
+  if (movieErr) console.error("Movies fetch error:", movieErr.message);
 
-      const { data: series, error: seriesErr } = await supabase
-        .from("series")
-        .select("*");
-      if (seriesErr) console.error("Series fetch error:", seriesErr.message);
+  const { data: seriesData, error: seriesErr } = await supabase
+    .from("series")
+    .select("*");
+  if (seriesErr) console.error("Series fetch error:", seriesErr.message);
 
-      const combined: Item[] = [
-        ...(movies?.map((m: any) => ({ ...m, type: "movie" })) || []),
-        ...(series?.map((s: any) => ({ ...s, type: "series" })) || []),
-      ];
+  const combined: Item[] = [
+    ...(moviesData?.map((m) => ({
+      id: m.id ?? 0,
+      type: "movie" as const,
+      title: m.title ?? "Untitled",
+      poster_url: m.poster_url ?? "",
+      backdrop_url: m.backdrop_url ?? "",
+      year: m.year ?? "",
+      description: m.description ?? "",
+      watch_url: m.watch_url ?? undefined,
+      trailer_url: m.trailer_url ?? undefined,
+      rating: m.rating ?? undefined,
+      genre: m.genre ?? [],
+    })) ?? []),
+    ...(seriesData?.map((s) => ({
+      id: s.id ?? 0,
+      type: "series" as const,
+      title: s.title ?? "Untitled",
+      poster_url: s.poster_url ?? "",
+      backdrop_url: s.backdrop_url ?? "",
+      year: s.year ?? "",
+      description: s.description ?? "",
+      watch_url: s.watch_url ?? undefined,
+      trailer_url: s.trailer_url ?? undefined,
+      rating: s.rating ?? undefined,
+      genre: s.genre ?? [],
+      episodes: s.episodes ?? undefined,
+      seasons: s.seasons ?? undefined,
+    })) ?? []),
+  ];
 
-      setItems(combined);
-      setLoading(false);
-    };
+  setItems(combined);
+  setLoading(false);
+};
 
     fetchData();
   }, []);
 
-  // Related items based on overlapping genres
+  // Related items based on overlapping genres AND same type
   const relatedItems = selectedItem
     ? items.filter(
         (i) =>
           i.id !== selectedItem.id &&
-          i.type !== selectedItem.type &&
+          i.type === selectedItem.type &&
           i.genre.some((g) => selectedItem.genre.includes(g))
       )
     : [];
@@ -95,7 +140,7 @@ const HeroCarousel = () => {
     if (index !== current) setCurrent(index);
   };
 
-  // --- Skeleton component ---
+  // Skeleton card
   const SkeletonCard = () => (
     <div className="relative w-full h-44 flex-shrink-0 snap-center flex justify-center px-2 animate-pulse">
       <div className="absolute inset-0 bg-gray-700 rounded-2xl" />
@@ -119,8 +164,6 @@ const HeroCarousel = () => {
       </section>
     );
   }
-
-  const currentItem = items[current];
 
   return (
     <section className="relative w-full px-5 py-4 flex flex-col items-center overflow-hidden">
@@ -196,34 +239,31 @@ const HeroCarousel = () => {
         ))}
       </div>
 
-     {/* Carousel Dots */}
-<div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-10">
-  {items.map((_, index) => (
-    <button
-      key={`dot-${index}`}
-      onClick={() => {
-        setCurrent(index);
-        // Scroll mobile carousel
-        if (window.innerWidth < 768) {
-          mobileScrollRef.current?.scrollTo({
-            left: index * (mobileScrollRef.current?.clientWidth ?? 0),
-            behavior: "smooth",
-          });
-        } else {
-          // Scroll desktop carousel
-          desktopScrollRef.current?.scrollTo({
-            left: index * (desktopScrollRef.current?.clientWidth ?? 0),
-            behavior: "smooth",
-          });
-        }
-      }}
-      className={`w-2 h-2 rounded-full transition-all ${
-        current === index ? "bg-red-500 scale-125" : "bg-gray-500/50"
-      }`}
-    />
-  ))}
-</div>
-
+      {/* Carousel Dots */}
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-10">
+        {items.map((_, index) => (
+          <button
+            key={`dot-${index}`}
+            onClick={() => {
+              setCurrent(index);
+              if (window.innerWidth < 768) {
+                mobileScrollRef.current?.scrollTo({
+                  left: index * (mobileScrollRef.current?.clientWidth ?? 0),
+                  behavior: "smooth",
+                });
+              } else {
+                desktopScrollRef.current?.scrollTo({
+                  left: index * (desktopScrollRef.current?.clientWidth ?? 0),
+                  behavior: "smooth",
+                });
+              }
+            }}
+            className={`w-2 h-2 rounded-full transition-all ${
+              current === index ? "bg-red-500 scale-125" : "bg-gray-500/50"
+            }`}
+          />
+        ))}
+      </div>
 
       {/* Modal */}
       <AnimatePresence>
@@ -254,8 +294,11 @@ const HeroCarousel = () => {
                     </button>
                   )}
                   <p className="text-gray-300 mb-4">{selectedItem.description}</p>
-                  <p className="text-sm text-gray-300 mb-2">{selectedItem.year} • {selectedItem.genre.join(", ")}</p>
+                  <p className="text-sm text-gray-300 mb-2">
+                    {selectedItem.year} • {selectedItem.genre.join(", ")}
+                  </p>
                 </div>
+
                 <div className="flex gap-4 mb-6">
                   {selectedItem.trailer_url && (
                     <a
@@ -272,6 +315,7 @@ const HeroCarousel = () => {
                   </button>
                 </div>
 
+                {/* More like this */}
                 {relatedItems.length > 0 && (
                   <div>
                     <h3 className="text-xl font-bold text-white mb-3">More like this</h3>
@@ -292,6 +336,7 @@ const HeroCarousel = () => {
                   </div>
                 )}
               </div>
+
               <button
                 className="absolute top-4 right-4 text-white text-2xl"
                 onClick={() => setSelectedItem(null)}
