@@ -4,25 +4,27 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Bookmark } from "lucide-react";
 import Header from "../components/Header";
-import { supabase } from "../lib/supabaseClient"; 
+import { supabase } from "../lib/supabaseClient";
 
-
+// Movie type
 interface Movie {
   id: number;
   title: string;
-  poster_url: string; 
+  poster_url: string;
+  backdrop_url: string;
   description: string;
   year: string;
   rating: number;
-  
-  genre?: string;
+  genre: string[]; // assuming Postgres array
+  trailer_url: string;
 }
 
-const Movies = () => {
+const MoviesPage = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // ✅ Fetch from Supabase
+  // Fetch movies
   useEffect(() => {
     const fetchMovies = async () => {
       const { data, error } = await supabase.from("movies").select("*");
@@ -31,46 +33,76 @@ const Movies = () => {
       } else {
         setMovies(data as Movie[]);
       }
+      setLoading(false);
     };
 
     fetchMovies();
   }, []);
 
-  // Related movies (same genre if available)
+  // ✅ Related movies (same genre, exclude current one)
   const relatedMovies = selectedMovie
     ? movies.filter(
         (m) =>
-          m.genre === selectedMovie.genre && m.id !== selectedMovie.id
+          m.id !== selectedMovie.id &&
+          m.genre.some((g) => selectedMovie.genre.includes(g))
       )
     : [];
 
   return (
     <>
       <Header />
-      <section className="w-full py-8">
-        
-        {/* Movie List (scrollable) */}
-        <div className="flex gap-6 overflow-x-auto scrollbar-hide">
-          {movies.map((movie) => (
+      <section className="w-full py-20 px-4 md:px-12">
+        {/* Skeleton state */}
+        {loading && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-white/10 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden animate-pulse"
+              >
+                {/* Poster skeleton */}
+                <div className="w-full h-72 bg-black/40"></div>
+
+                {/* Text skeleton */}
+                <div className="p-3 space-y-2">
+                  <div className="h-4 bg-black/40 rounded w-3/4"></div>
+                  <div className="h-3 bg-black/40 rounded w-1/2"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && movies.length === 0 && (
+          <p className="text-gray-400 text-center">No movies found.</p>
+        )}
+
+        {/* Grid of movies */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
+          {movies.map((m) => (
             <motion.div
-              key={movie.id}
-              whileHover={{ scale: 1.02 }}
-              className=" flex-shrink-0 bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer"
-              onClick={() => setSelectedMovie(movie)}
+              key={m.id}
+              whileHover={{ scale: 1.05 }}
+              className="bg-white/10 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden cursor-pointer hover:shadow-cyan-500/20 transition"
+              onClick={() => setSelectedMovie(m)}
             >
               <Image
-                src={movie.poster_url}
-                alt={movie.title}
-                width={180}
-                height={260}
-                className="object-cover h-60 w-40"
+                src={m.poster_url}
+                alt={m.title}
+                width={300}
+                height={450}
+                className="object-cover w-full h-72"
               />
-             
+              <div className="p-3">
+                <h3 className="text-white font-semibold truncate">{m.title}</h3>
+                <p className="text-sm text-gray-400">{m.year}</p>
+              </div>
             </motion.div>
           ))}
         </div>
 
-        {/* Expanded Details */}
+        {/* Expanded modal */}
         <AnimatePresence>
           {selectedMovie && (
             <motion.div
@@ -96,16 +128,22 @@ const Movies = () => {
                       {selectedMovie.description}
                     </p>
                     <p className="text-sm opacity-70">{selectedMovie.year}</p>
-            <p className="text-cyan-400 font-semibold">⭐ {selectedMovie.rating}</p>
+                    <p className="text-cyan-400 font-semibold">
+                      ⭐ {selectedMovie.rating}
+                    </p>
                   </div>
                   <div className="flex gap-4 mb-6">
                     <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
                       <Play size={18} />
+                      Play
                     </button>
                     <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
                       <Bookmark size={18} />
+                      Watchlist
                     </button>
                   </div>
+
+                  {/* ✅ Related movies section */}
                   {relatedMovies.length > 0 && (
                     <div>
                       <h3 className="text-xl font-bold text-white mb-3">
@@ -113,10 +151,7 @@ const Movies = () => {
                       </h3>
                       <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
                         {relatedMovies.map((m) => (
-                          <div
-                            key={m.id}
-                            className="flex-shrink-0 snap-start"
-                          >
+                          <div key={m.id} className="flex-shrink-0 snap-start">
                             <Image
                               src={m.poster_url}
                               alt={m.title}
@@ -146,4 +181,4 @@ const Movies = () => {
   );
 };
 
-export default Movies;
+export default MoviesPage;
