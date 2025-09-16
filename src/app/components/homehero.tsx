@@ -183,13 +183,13 @@ const HeroCarousel = () => {
               {i.backdrop_url && (
                 <>
                   <div
-                    className="absolute top-0 left-0 w-full h-full bg-cover bg-center opacity-40 blur-lg transition-all duration-500"
+                    className="absolute top-0 left-0 w-full h-full bg-cover bg-center opacity-40 blur-1g transition-all duration-500"
                     style={{ backgroundImage: `url(${i.backdrop_url})` }}
                   />
                   <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-black/50 via-black/20 to-black/60 rounded-2xl" />
                 </>
               )}
-              <div className="flex gap-4 items-center relative z-10 bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer p-2">
+              <div className="flex gap-4 items-center relative z-10 bg-white/10 backdrop-blur-5g rounded-2xl shadow-lg overflow-hidden cursor-pointer p-2">
                 <Image
                   src={i.poster_url}
                   alt={i.title}

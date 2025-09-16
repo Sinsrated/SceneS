@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Bookmark } from "lucide-react";
+import { Play, Bookmark, Download } from "lucide-react";
 import Header from "../components/Header";
 import { supabase } from "../lib/supabaseClient";
 
@@ -63,7 +63,7 @@ const SeriesPage = () => {
         className="bg-white/10 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden animate-pulse"
       >
         {/* Poster skeleton */}
-        <div className="w-full h-72 bg-black/40"></div>
+        <div className="w-full h-55 bg-black/40"></div>
 
         {/* Text skeleton */}
         <div className="p-3 space-y-2">
@@ -94,7 +94,7 @@ const SeriesPage = () => {
                 alt={s.title}
                 width={300}
                 height={450}
-                className="object-cover w-full h-72" 
+                className="object-cover w-full h-55" 
               />
               <div className="p-3">
                 <h3 className="text-white font-semibold truncate">{s.title}</h3>
@@ -140,16 +140,34 @@ const SeriesPage = () => {
                       Seasons: {selectedSerie.seasons}
                     </p>
                   </div>
-                  <div className="flex gap-4 mb-6">
-                    <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                      <Play size={18} />
-                      Play
-                    </button>
-                    <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                      <Bookmark size={18} />
-                      Watchlist
-                    </button>
-                  </div>
+                  
+                  <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
+  {/* Play button */}
+  <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
+    <Play size={18} />
+  
+  </button>
+
+  {/* Watchlist button */}
+  <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
+    <Download size={18} />
+    Download
+  </button>
+
+  {/* Trailer button (only shows if trailer_url exists) */}
+  {selectedSerie.trailer_url && (
+    <a
+      href={selectedSerie.trailer_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition"
+    >
+      <Play size={18} /> Trailer
+    </a>
+  )}
+</div>
+
+   
 
                   {/* ✅ Related series section */}
                   {relatedSeries.length > 0 && (

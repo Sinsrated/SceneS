@@ -2,7 +2,7 @@
 import  { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Bookmark } from "lucide-react";
+import { Play, Bookmark, Download } from "lucide-react";
 import { supabase } from "../lib/supabaseClient"; 
 
 // ✅ Movie interface with genre as array
@@ -64,7 +64,7 @@ const Trending = () => {
                 alt={movie.title}
                 width={180}
                 height={260}
-                className="object-cover h-60 w-40"
+                className="object-cover h-55 w-35"
               />
             </motion.div>
           ))}
@@ -111,21 +111,32 @@ const Trending = () => {
                   </div>
 
                   {/* Buttons */}
-                  <div className="flex gap-4 mb-6">
-                    {selectedMovie.trailer_url && (
-                      <a
-                        href={selectedMovie.trailer_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition"
-                      >
-                        <Play size={18} /> Watch Trailer
-                      </a>
-                    )}
-                    <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                      <Bookmark size={18} /> Save
-                    </button>
-                  </div>
+                    <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
+  {/* Play button */}
+  <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
+    <Play size={18} />
+  
+  </button>
+
+  {/* Watchlist button */}
+  <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
+    <Download size={18} />
+    Download
+  </button>
+
+  {/* Trailer button (only shows if trailer_url exists) */}
+  {selectedMovie.trailer_url && (
+    <a
+      href={selectedMovie.trailer_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition"
+    >
+      <Play size={18} /> Trailer
+    </a>
+  )}
+</div>
+
 
                   {/* More Like This */}
                   {relatedMovies.length > 0 && (

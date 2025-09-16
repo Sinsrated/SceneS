@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Bookmark } from "lucide-react";
+import { Play, Bookmark, Download } from "lucide-react";
 import Header from "../components/Header";
 import { supabase } from "../lib/supabaseClient"; 
 
@@ -13,7 +13,7 @@ interface Movie {
   description: string;
  year: string;
   rating: number;
-  
+  trailer_url: string;
   genre?: string;
 }
 
@@ -62,7 +62,7 @@ const LatestMovies = () => {
                 alt={movie.title}
                 width={100}
                 height={160}
-                className="object-cover h-60 w-40"
+                className="object-cover h-55 w-35"
               />
              
             </motion.div>
@@ -97,14 +97,32 @@ const LatestMovies = () => {
                     <p className="text-sm opacity-70">{selectedMovie.year}</p>
             <p className="text-cyan-400 font-semibold">⭐ {selectedMovie.rating}</p>
                   </div>
-                  <div className="flex gap-4 mb-6">
+                    <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
+                    {/* Play button */}
                     <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
                       <Play size={18} />
+                    
                     </button>
+                  
+                    {/* Watchlist button */}
                     <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                      <Bookmark size={18} />
+                      <Download size={18} />
+                      Download
                     </button>
+                  
+                    {/* Trailer button (only shows if trailer_url exists) */}
+                    {selectedMovie.trailer_url && (
+                      <a
+                        href={selectedMovie.trailer_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition"
+                      >
+                        <Play size={18} /> Trailer
+                      </a>
+                    )}
                   </div>
+                  
                   {relatedMovies.length > 0 && (
                     <div>
                       <h3 className="text-xl font-bold text-white mb-3">

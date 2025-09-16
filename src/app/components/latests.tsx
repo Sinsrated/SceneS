@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Bookmark } from "lucide-react";
+import { Play, Bookmark, Download } from "lucide-react";
 import Header from "../components/Header";
 import { supabase } from "../lib/supabaseClient";
 
@@ -13,6 +13,7 @@ interface Series {
   poster_url: string;
   description: string;
   year: string;
+  trailer_url: string;
   rating: number;
   episodes?: number;
   seasons?: number;
@@ -64,7 +65,7 @@ const Latestseries = () => {
                 alt={s.title}
                 width={180}
                 height={260}
-                className="object-cover h-60 w-40"
+                className="object-cover h-55 w-35"
               />
             </motion.div>
           ))}
@@ -106,14 +107,32 @@ const Latestseries = () => {
                       Seasons: {selectedSerie.seasons}
                     </p>
                   </div>
-                  <div className="flex gap-4 mb-6">
-                    <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                      <Play size={18} />
-                    </button>
-                    <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                      <Bookmark size={18} />
-                    </button>
-                  </div>
+                   <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
+  {/* Play button */}
+  <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
+    <Play size={18} />
+  
+  </button>
+
+  {/* Watchlist button */}
+  <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
+    <Download size={18} />
+    Download
+  </button>
+
+  {/* Trailer button (only shows if trailer_url exists) */}
+  {selectedSerie.trailer_url && (
+    <a
+      href={selectedSerie.trailer_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition"
+    >
+      <Play size={18} /> Trailer
+    </a>
+  )}
+</div>
+
 
                   {relatedSeries.length > 0 && (
                     <div>
