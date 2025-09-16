@@ -11,3 +11,7 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+[build.environment]
+  NEXT_PUBLIC_SUPABASE_URL = "https://ihwanbtnotfhraewbmgq.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlod2FuYnRub3RmaHJhZXdibWdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1MzkxNzcsImV4cCI6MjA3MzExNTE3N30.0NKqpETuGh-Kqs1eLBwGrVk5If7X5mMA9ZtYde9PUcs"
