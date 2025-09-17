@@ -49,7 +49,7 @@ const Latestseries = () => {
     <>
       <Header />
       <section className="w-full py-8">
-        <h2 className="text-2xl font-bold text-white mb-6">Latest Series</h2>
+        <h2 className="text-2xl font-bold text-gray-500 mb-6">Latest Series</h2>
 
         {/* Series List (scrollable) */}
         <div className="flex gap-6 overflow-x-auto scrollbar-hide">

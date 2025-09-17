@@ -5,6 +5,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Bookmark } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
+import { create } from "domain";
 
 interface Item {
   id: number;
@@ -20,6 +21,7 @@ interface Item {
   genre: string[];
   episodes?: number;
   seasons?: number;
+  created_at: number;
 }
 
 // Define Supabase row types
@@ -34,6 +36,7 @@ interface MovieRow {
   trailer_url?: string;
   rating?: number;
   genre: string[];
+  created_at: number;
 }
 
 interface SeriesRow extends MovieRow {
@@ -53,14 +56,20 @@ const HeroCarousel = () => {
   // Fetch movies + series from Supabase
   useEffect(() => {
     const fetchData = async () => {
-  const { data: moviesData, error: movieErr } = await supabase
-    .from("movies")
-    .select("*");
-  if (movieErr) console.error("Movies fetch error:", movieErr.message);
+ try {
+        const { data: moviesData, error: movieErr } = await supabase
+          .from("movies")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(10);
 
-  const { data: seriesData, error: seriesErr } = await supabase
-    .from("series")
-    .select("*");
+        if (movieErr) console.error("Movies fetch error:", movieErr.message);
+
+        const { data: seriesData, error: seriesErr } = await supabase
+          .from("series")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(10);
   if (seriesErr) console.error("Series fetch error:", seriesErr.message);
 
   const combined: Item[] = [
@@ -76,6 +85,7 @@ const HeroCarousel = () => {
       trailer_url: m.trailer_url ?? undefined,
       rating: m.rating ?? undefined,
       genre: m.genre ?? [],
+      created_at: m.created_at,
     })) ?? []),
     ...(seriesData?.map((s) => ({
       id: s.id ?? 0,
@@ -91,12 +101,21 @@ const HeroCarousel = () => {
       genre: s.genre ?? [],
       episodes: s.episodes ?? undefined,
       seasons: s.seasons ?? undefined,
+      created_at: s.created_at,
     })) ?? []),
   ];
 
-  setItems(combined);
-  setLoading(false);
-};
+  const sorted = combined
+          .sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))
+          .slice(0, 10);
+
+   setItems(sorted);
+      } catch (err) {
+        console.error("Fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
     fetchData();
   }, []);
@@ -272,9 +291,9 @@ const HeroCarousel = () => {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-lg z-50 p-4 overflow-y-auto"
+            className="fixed inset-0 bg-black/70 backdrop-blur-lg z-50  p-4 overflow-y-auto"
           >
-            <div className="bg-white/10 rounded-2xl shadow-2xl max-w-5xl w-full mx-auto p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10">
+            <div className="bg-white/10 rounded-2xl top-15 shadow-2xl max-w-5xl w-full mx-auto p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10">
               <Image
                 src={selectedItem.poster_url}
                 alt={selectedItem.title}
@@ -318,7 +337,7 @@ const HeroCarousel = () => {
                 {/* More like this */}
                 {relatedItems.length > 0 && (
                   <div>
-                    <h3 className="text-xl font-bold text-white mb-3">More like this</h3>
+                    <h3 className="text-xl font-bold text-white mb-3">More like {selectedItem.title}</h3>
                     <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
                       {relatedItems.map((i) => (
                         <div key={`${i.type}-${i.id}`} className="flex-shrink-0 snap-start">
