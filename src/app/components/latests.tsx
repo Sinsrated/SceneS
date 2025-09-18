@@ -1,8 +1,8 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Bookmark, Download } from "lucide-react";
+import { Play, Download, ChevronLeft, ChevronRight } from "lucide-react"; // ✅ added missing icons
 import Header from "../components/Header";
 import { supabase } from "../lib/supabaseClient";
 
@@ -13,7 +13,7 @@ interface Series {
   poster_url: string;
   description: string;
   year: string;
-  trailer_url: string;
+  trailer_url?: string; // ✅ make optional for safety
   rating: number;
   episodes?: number;
   seasons?: number;
@@ -23,20 +23,39 @@ interface Series {
 const Latestseries = () => {
   const [series, setSeries] = useState<Series[]>([]);
   const [selectedSerie, setSelectedSerie] = useState<Series | null>(null);
+  const [loading, setLoading] = useState(true); // ✅ added loading state
+  const scrollRef = useRef<HTMLDivElement>(null); // ✅ added ref for scroll
 
   // ✅ Fetch from Supabase
   useEffect(() => {
     const fetchSeries = async () => {
-      const { data, error } = await supabase.from("series").select("*");
-      if (error) {
-        console.error("Error fetching series:", error.message);
-      } else {
-        setSeries(data as Series[]);
+      try {
+        const { data, error } = await supabase.from("series").select("*");
+        if (error) {
+          console.error("Error fetching series:", error.message);
+        } else {
+          setSeries(data as Series[]);
+        }
+      } catch (err) {
+        console.error("Unexpected fetch error:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchSeries();
   }, []);
+
+  // ✅ scroll function for arrows
+  const scroll = (direction: "left" | "right") => {
+    if (scrollRef.current) {
+      const scrollAmount = 300;
+      scrollRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
 
   // Related series (same genre if available)
   const relatedSeries = selectedSerie
@@ -48,27 +67,54 @@ const Latestseries = () => {
   return (
     <>
       <Header />
-      <section className="w-full py-8">
+      <section className="w-full py-8 relative">
         <h2 className="text-2xl font-bold text-gray-500 mb-6">Latest Series</h2>
 
-        {/* Series List (scrollable) */}
-        <div className="flex gap-6 overflow-x-auto scrollbar-hide">
-          {series.map((s) => (
-            <motion.div
-              key={s.id}
-              whileHover={{ scale: 1.02 }}
-              className="flex-shrink-0 bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer"
-              onClick={() => setSelectedSerie(s)}
-            >
-              <Image
-                src={s.poster_url}
-                alt={s.title}
-                width={180}
-                height={260}
-                className="object-cover h-55 w-35"
-              />
-            </motion.div>
-          ))}
+        {/* Arrows for desktop only */}
+        <button
+          onClick={() => scroll("left")}
+          className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
+        >
+          <ChevronLeft size={28} />
+        </button>
+        <button
+          onClick={() => scroll("right")}
+          className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
+        >
+          <ChevronRight size={28} />
+        </button>
+
+        {/* ✅ Single scrollable row */}
+        <div
+          ref={scrollRef}
+          className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth"
+        >
+          {loading
+            ? Array.from({ length: 10 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex-shrink-0 w-[180px] bg-white/10 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden animate-pulse"
+                >
+                  {/* Poster skeleton */}
+                  <div className="w-full h-[260px] bg-black/40"></div>
+                </div>
+              ))
+            : series.map((s) => (
+                <motion.div
+                  key={s.id}
+                  whileHover={{ scale: 1.02 }}
+                  className="flex-shrink-0 bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer"
+                  onClick={() => setSelectedSerie(s)}
+                >
+                  <Image
+                    src={s.poster_url}
+                    alt={s.title}
+                    width={180}
+                    height={260}
+                    className="object-cover h-55 w-35"
+                  />
+                </motion.div>
+              ))}
         </div>
 
         {/* Expanded Details */}
@@ -107,32 +153,33 @@ const Latestseries = () => {
                       Seasons: {selectedSerie.seasons}
                     </p>
                   </div>
-                   <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
-  {/* Play button */}
-  <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-    <Play size={18} />
-  
-  </button>
 
-  {/* Watchlist button */}
-  <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-    <Download size={18} />
-    Download
-  </button>
+                  {/* Action buttons */}
+                  <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
+                    {/* Play button */}
+                    <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
+                      <Play size={18} />
+                      Play
+                    </button>
 
-  {/* Trailer button (only shows if trailer_url exists) */}
-  {selectedSerie.trailer_url && (
-    <a
-      href={selectedSerie.trailer_url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition"
-    >
-      <Play size={18} /> Trailer
-    </a>
-  )}
-</div>
+                    {/* Download button */}
+                    <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
+                      <Download size={18} />
+                      Download
+                    </button>
 
+                    {/* Trailer button */}
+                    {selectedSerie.trailer_url && (
+                      <a
+                        href={selectedSerie.trailer_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition"
+                      >
+                        <Play size={18} /> Trailer
+                      </a>
+                    )}
+                  </div>
 
                   {relatedSeries.length > 0 && (
                     <div>

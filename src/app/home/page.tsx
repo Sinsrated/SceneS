@@ -6,6 +6,8 @@ import Trending from "../components/trending";
 import LatestMovies from "../components/latestm";
 import LatestSeries from "../components/latests";
 import Animation from "../components/animation";
+import LatestDrama from "../components/latestd";
+import LatestAniSerie from "../components/aniseries";
 
 
 export default function Home() {
@@ -16,7 +18,9 @@ export default function Home() {
      <HeroCarousel /> 
      <Header />
      <Trending />
+     <LatestDrama />
      <LatestMovies />
+     <LatestAniSerie />
      <LatestSeries />
      <Animation />
      <Footer /> 

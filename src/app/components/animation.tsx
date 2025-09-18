@@ -1,15 +1,20 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Bookmark, Download } from "lucide-react";
+import {
+  Play,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import Header from "../components/Header";
-import { supabase } from "../lib/supabaseClient"; 
+import { supabase } from "../lib/supabaseClient";
 
 interface AnimationType {
   id: number;
   title: string;
-  poster_url: string; 
+  poster_url: string;
   description: string;
   year: string;
   rating: number;
@@ -19,54 +24,100 @@ interface AnimationType {
 
 const Animation = () => {
   const [animations, setAnimations] = useState<AnimationType[]>([]);
-  const [selectedAnimation, setSelectedAnimation] = useState<AnimationType | null>(null);
+  const [selectedAnimation, setSelectedAnimation] =
+    useState<AnimationType | null>(null);
+  const [loading, setLoading] = useState(true);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   // ✅ Fetch from Supabase
   useEffect(() => {
     const fetchAnimations = async () => {
-      const { data, error } = await supabase.from("animation").select("*");
-      if (error) {
-        console.error("Error fetching animations:", error.message);
-      } else {
-        setAnimations(data as AnimationType[]);
+      try {
+        const { data, error } = await supabase.from("animation").select("*");
+        if (error) {
+          console.error("Error fetching animations:", error.message);
+        } else {
+          setAnimations(data as AnimationType[]);
+        }
+      } catch (err) {
+        console.error("Unexpected fetch error:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchAnimations();
   }, []);
 
-  // Related animations (same genre if available)
- const relatedAnimations = selectedAnimation
+  // ✅ Related animations (same genre overlap)
+  const relatedAnimations = selectedAnimation
     ? animations.filter(
         (a) =>
           a.id !== selectedAnimation.id &&
-          a.genre?.some((g) => selectedAnimation.genre?.includes(g)) // ✅ overlap check
+          a.genre?.some((g) => selectedAnimation.genre?.includes(g))
       )
     : [];
+
+  // ✅ Scroll function
+  const scroll = (direction: "left" | "right") => {
+    if (scrollRef.current) {
+      const { scrollLeft, clientWidth } = scrollRef.current;
+      const scrollAmount =
+        direction === "left" ? scrollLeft - clientWidth : scrollLeft + clientWidth;
+      scrollRef.current.scrollTo({ left: scrollAmount, behavior: "smooth" });
+    }
+  };
 
   return (
     <>
       <Header />
-      <section className="w-full py-8">
-         <h2 className="text-2xl font-bold text-gray-500 mb-6">Animation</h2>
-        {/* Animation List (scrollable) */}
-        <div className="flex gap-6 overflow-x-auto scrollbar-hide">
-          {animations.map((animation) => (
-            <motion.div
-              key={animation.id}
-              whileHover={{ scale: 1.02 }}
-              className="flex-shrink-0 bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer"
-              onClick={() => setSelectedAnimation(animation)}
-            >
-              <Image
-                src={animation.poster_url}
-                alt={animation.title}
-                width={180}
-                height={260}
-                className="object-cover h-55 w-35"
-              />
-            </motion.div>
-          ))}
+      <section className="w-full py-8 relative">
+        <h2 className="text-2xl font-bold text-gray-500 mb-6">Animation</h2>
+
+        {/* Arrows for desktop only */}
+        <button
+          onClick={() => scroll("left")}
+          className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
+        >
+          <ChevronLeft size={28} />
+        </button>
+        <button
+          onClick={() => scroll("right")}
+          className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
+        >
+          <ChevronRight size={28} />
+        </button>
+
+        {/* ✅ Single scrollable row */}
+        <div
+          ref={scrollRef}
+          className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth"
+        >
+          {loading
+            ? Array.from({ length: 10 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex-shrink-0 w-[180px] bg-white/10 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden animate-pulse"
+                >
+                  <div className="w-full h-[260px] bg-black/40"></div>
+                </div>
+              ))
+            : animations.map((animation) => (
+                <motion.div
+                  key={animation.id}
+                  whileHover={{ scale: 1.02 }}
+                  className="flex-shrink-0 bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden cursor-pointer"
+                  onClick={() => setSelectedAnimation(animation)}
+                >
+                  <Image
+                    src={animation.poster_url}
+                    alt={animation.title}
+                    width={180}
+                    height={260}
+                    className="object-cover h-[260px] w-[180px]"
+                  />
+                </motion.div>
+              ))}
         </div>
 
         {/* Expanded Details */}
@@ -95,22 +146,20 @@ const Animation = () => {
                       {selectedAnimation.description}
                     </p>
                     <p className="text-sm opacity-70">{selectedAnimation.year}</p>
-                    <p className="text-cyan-400 font-semibold">⭐ {selectedAnimation.rating}</p>
+                    <p className="text-cyan-400 font-semibold">
+                      ⭐ {selectedAnimation.rating}
+                    </p>
                   </div>
 
+                  {/* Buttons */}
                   <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
-                    {/* Play button */}
                     <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
                       <Play size={18} />
                     </button>
-
-                    {/* Download button */}
                     <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
                       <Download size={18} />
                       Download
                     </button>
-
-                    {/* Trailer button (only shows if trailer_url exists) */}
                     {selectedAnimation.trailer_url && (
                       <a
                         href={selectedAnimation.trailer_url}
@@ -123,6 +172,7 @@ const Animation = () => {
                     )}
                   </div>
 
+                  {/* Related */}
                   {relatedAnimations.length > 0 && (
                     <div>
                       <h3 className="text-xl font-bold text-white mb-3">

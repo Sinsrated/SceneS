@@ -54,71 +54,75 @@ const HeroCarousel = () => {
   const desktopScrollRef = useRef<HTMLDivElement | null>(null);
 
   // Fetch movies + series from Supabase
-  useEffect(() => {
-    const fetchData = async () => {
- try {
-        const { data: moviesData, error: movieErr } = await supabase
-          .from("movies")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(10);
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const { data: moviesData, error: movieErr } = await supabase
+        .from("movies")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(10);
 
-        if (movieErr) console.error("Movies fetch error:", movieErr.message);
+      if (movieErr) console.error("Movies fetch error:", movieErr.message);
 
-        const { data: seriesData, error: seriesErr } = await supabase
-          .from("series")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(10);
-  if (seriesErr) console.error("Series fetch error:", seriesErr.message);
+      const { data: seriesData, error: seriesErr } = await supabase
+        .from("series")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(10);
 
-  const combined: Item[] = [
-    ...(moviesData?.map((m) => ({
-      id: m.id ?? 0,
-      type: "movie" as const,
-      title: m.title ?? "Untitled",
-      poster_url: m.poster_url ?? "",
-      backdrop_url: m.backdrop_url ?? "",
-      year: m.year ?? "",
-      description: m.description ?? "",
-      watch_url: m.watch_url ?? undefined,
-      trailer_url: m.trailer_url ?? undefined,
-      rating: m.rating ?? undefined,
-      genre: m.genre ?? [],
-      created_at: m.created_at,
-    })) ?? []),
-    ...(seriesData?.map((s) => ({
-      id: s.id ?? 0,
-      type: "series" as const,
-      title: s.title ?? "Untitled",
-      poster_url: s.poster_url ?? "",
-      backdrop_url: s.backdrop_url ?? "",
-      year: s.year ?? "",
-      description: s.description ?? "",
-      watch_url: s.watch_url ?? undefined,
-      trailer_url: s.trailer_url ?? undefined,
-      rating: s.rating ?? undefined,
-      genre: s.genre ?? [],
-      episodes: s.episodes ?? undefined,
-      seasons: s.seasons ?? undefined,
-      created_at: s.created_at,
-    })) ?? []),
-  ];
+      if (seriesErr) console.error("Series fetch error:", seriesErr.message);
 
-  const sorted = combined
-          .sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))
-          .slice(0, 10);
+      // Merge movies + series into ONE array
+      const combined: Item[] = [
+        ...(moviesData?.map((m) => ({
+          id: m.id ?? 0,
+          type: "movie" as const,
+          title: m.title ?? "Untitled",
+          poster_url: m.poster_url ?? "",
+          backdrop_url: m.backdrop_url ?? "",
+          year: m.year ?? "",
+          description: m.description ?? "",
+          watch_url: m.watch_url ?? undefined,
+          trailer_url: m.trailer_url ?? undefined,
+          rating: m.rating ?? undefined,
+          genre: m.genre ?? [],
+          created_at: new Date(m.created_at).getTime(), // ✅ convert to timestamp
+        })) ?? []),
+        ...(seriesData?.map((s) => ({
+          id: s.id ?? 0,
+          type: "series" as const,
+          title: s.title ?? "Untitled",
+          poster_url: s.poster_url ?? "",
+          backdrop_url: s.backdrop_url ?? "",
+          year: s.year ?? "",
+          description: s.description ?? "",
+          watch_url: s.watch_url ?? undefined,
+          trailer_url: s.trailer_url ?? undefined,
+          rating: s.rating ?? undefined,
+          genre: s.genre ?? [],
+          episodes: s.episodes ?? undefined,
+          seasons: s.seasons ?? undefined,
+          created_at: new Date(s.created_at).getTime(), // ✅ convert to timestamp
+        })) ?? []),
+      ];
 
-   setItems(sorted);
-      } catch (err) {
-        console.error("Fetch error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+      // ✅ Sort by date, newest first (mixed movies & series)
+      const sorted = combined
+        .sort((a, b) => b.created_at - a.created_at)
+        .slice(0, 10);
 
-    fetchData();
-  }, []);
+      setItems(sorted);
+    } catch (err) {
+      console.error("Fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, []);
+
 
   // Related items based on overlapping genres AND same type
   const relatedItems = selectedItem
@@ -243,7 +247,7 @@ const HeroCarousel = () => {
               {i.backdrop_url && (
                 <>
                   <div
-                    className="absolute inset-0 w-full h-full bg-cover bg-bottom  transition-all duration-500 rounded-2xl"
+                    className="absolute inset-0 w-full h-full bg-cover bg-center  transition-all duration-500 rounded-2xl"
                     style={{ backgroundImage: `url(${i.backdrop_url})` }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/80 rounded-2xl" />
