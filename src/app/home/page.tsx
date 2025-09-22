@@ -18,10 +18,12 @@ export default function Home() {
      <HeroCarousel /> 
      <Header />
      <Trending />
-     <LatestDrama />
      <LatestMovies />
+      <LatestSeries />
+     <LatestDrama />
+     
      <LatestAniSerie />
-     <LatestSeries />
+    
      <Animation />
      <Footer /> 
      </> 

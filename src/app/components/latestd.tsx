@@ -69,7 +69,7 @@ if (error) {
     <>
       <Header />
       <section className="w-full py-8 relative">
-        <h2 className="text-2xl font-bold text-gray-500 mb-6">Drama</h2>
+        <h2 className="text-2xl font-bold text-gray-500 mb-6"> Latest Drama</h2>
 
         <button
           onClick={() => scroll("left")}

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
 
@@ -17,13 +16,11 @@ export default function CreateAccount() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // ✅ Handle account creation
   const handleCreate = async () => {
     if (!username || !email || !password || !confirmPassword) {
       setError("Please fill in all fields.");
       return;
     }
-
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -32,7 +29,7 @@ export default function CreateAccount() {
     setError("");
 
     try {
-      // Check if username or email already exists
+      // Check if username or email exists
       const { data: existingProfiles } = await supabase
         .from("profiles")
         .select("*")
@@ -44,29 +41,23 @@ export default function CreateAccount() {
       }
 
       // Insert new profile
-      const { error: insertError } = await supabase.from("profiles").insert([
-        {
-          username,
-          email,
-          password, // consider hashing for production
-         
-        },
-      ]);
+      const { data: insertedProfile, error: insertError } = await supabase
+        .from("profiles")
+        .insert([{ username, email, password }])
+        .select()
+        .single();
 
       if (insertError) throw insertError;
 
-      // ✅ Redirect to settings after creation
-      router.replace("/setting");
-  } catch (err: unknown) {
-  console.error(err);
-
-  if (err instanceof Error) {
-    setError(err.message);
-  } else {
-    setError("Failed to create account.");
-  }
-}
+      // ✅ Redirect to settings with the new user id
+      router.replace(`/setting?userId=${insertedProfile.id}`);
+    } catch (err: unknown) {
+      console.error(err);
+      if (err instanceof Error) setError(err.message);
+      else setError("Failed to create account.");
+    }
   };
+
   return (
     <section className="min-h-screen flex items-center justify-center bg-[url('/futuristic-bg.jpg')] bg-cover bg-center relative">
       <motion.div
@@ -75,8 +66,8 @@ export default function CreateAccount() {
         transition={{ duration: 0.8 }}
         className="w-full max-w-md p-8 rounded-2xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-xl"
       >
-        <h1 className="text-3xl font-bold text-white text-center mb-6">
-          Create Account 🚀
+        <h1 className="text-3xl font-bold text-gray-300 text-center mb-6">
+          Create Account
         </h1>
 
         {error && <p className="text-red-400 text-center mb-4">{error}</p>}
@@ -84,41 +75,41 @@ export default function CreateAccount() {
         <div className="space-y-4">
           {/* Username */}
           <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
-            <User className="text-white mr-3" size={20} />
+            <User className="text-gray-300 mr-3" size={20} />
             <input
               type="text"
               placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="bg-transparent w-full outline-none text-white placeholder-gray-300"
+              className="bg-transparent w-full outline-none text-gray-300 placeholder-gray-300"
             />
           </div>
 
           {/* Email */}
           <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
-            <Mail className="text-white mr-3" size={20} />
+            <Mail className="text-gray-300 mr-3" size={20} />
             <input
               type="email"
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="bg-transparent w-full outline-none text-white placeholder-gray-300"
+              className="bg-transparent w-full outline-none text-gray-300 placeholder-gray-300"
             />
           </div>
 
           {/* Password */}
           <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
-            <Lock className="text-white mr-3" size={20} />
+            <Lock className="text-gray-300 mr-3" size={20} />
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="bg-transparent w-full outline-none text-white placeholder-gray-300"
+              className="bg-transparent w-full outline-none text-gray-300 placeholder-gray-300"
             />
             <button
               type="button"
-              className="ml-2 text-white"
+              className="ml-2 text-gray-300"
               onClick={() => setShowPassword(!showPassword)}
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -127,17 +118,17 @@ export default function CreateAccount() {
 
           {/* Confirm Password */}
           <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
-            <Lock className="text-white mr-3" size={20} />
+            <Lock className="text-gray-300 mr-3" size={20} />
             <input
               type={showConfirm ? "text" : "password"}
               placeholder="Confirm Password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="bg-transparent w-full outline-none text-white placeholder-gray-300"
+              className="bg-transparent w-full outline-none text-gray-300 placeholder-gray-300"
             />
             <button
               type="button"
-              className="ml-2 text-white"
+              className="ml-2 text-gray-300"
               onClick={() => setShowConfirm(!showConfirm)}
             >
               {showConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -154,13 +145,6 @@ export default function CreateAccount() {
             Create Account <ArrowRight size={20} />
           </motion.button>
         </div>
-
-        <p className="text-center text-gray-300 mt-6">
-          Already have an account?{" "}
-          <Link href="/login" className="text-cyan-400 hover:underline">
-            Login
-          </Link>
-        </p>
       </motion.div>
     </section>
   );

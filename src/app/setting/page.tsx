@@ -1,41 +1,61 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { User, Bell, Shield, LogOut, X, Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { User, Bell, Shield, LogIn, X, Plus } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
+import Login from "../login/page";
 
-type UserType = { id: string; username: string; email: string; password: string; pfp_url?: string };
+type UserType = {
+  id: string;
+  username: string;
+  email: string;
+  password: string;
+  pfp_url?: string;
+};
 
 export default function Settings() {
   const router = useRouter();
-  const [accounts, setAccounts] = useState<UserType[]>([]);
+  const searchParams = useSearchParams();
+  const userId = searchParams.get("userId"); // Get userId from login/create redirect
+
   const [user, setUser] = useState<UserType | null>(null);
+  const [accounts, setAccounts] = useState<UserType[]>([]);
   const [showAccounts, setShowAccounts] = useState(false);
 
-  // ✅ Fetch accounts from Supabase
+  // ✅ Fetch the logged-in/created account only
   useEffect(() => {
-    const fetchAccounts = async () => {
-      try {
-        const { data, error } = await supabase.from("profiles").select("*");
-        if (error) throw error;
-        setAccounts(data || []);
-        // Set first account as active if none
-        if (data && data.length > 0 && !user) setUser(data[0]);
-      } catch (err) {
-        console.error("Error fetching accounts:", err);
+    const fetchAccount = async () => {
+      if (!userId) return;
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching account:", error);
+        return;
+      }
+
+      if (data) {
+        setUser(data);
+        setAccounts([data]); // Only show this account
       }
     };
-    fetchAccounts();
-  }, []);
 
-  // ✅ Switch account
+    fetchAccount();
+  }, [userId]);
+
+  // ✅ Switch account in session (optional)
   const handleSwitch = (acc: UserType) => setUser(acc);
 
   // ✅ Logout
   const handleLogout = () => {
     setUser(null);
+    setAccounts([]);
     router.replace("/login");
   };
 
@@ -78,18 +98,20 @@ export default function Settings() {
           >
             <div className="flex items-center gap-3">
               <User size={20} />
-              <span className="font-medium">Accounts</span>
+              <span className="font-medium">Manage Accounts</span>
             </div>
-            <span className="text-sm text-cyan-400">
-              {showAccounts ? "x" : "+"}
-            </span>
+            <span className="text-sm text-cyan-400">{showAccounts ? "x" : "+"}</span>
           </div>
 
           {showAccounts && (
             <div className="mt-4 space-y-3">
-              {accounts.map((acc, i) => (
+              {accounts.length === 0 && (
+                <p className="text-gray-400 text-sm">No accounts logged in yet.</p>
+              )}
+
+              {accounts.map((acc) => (
                 <div
-                  key={i}
+                  key={acc.id}
                   className={`flex items-center justify-between p-3 rounded-lg ${
                     acc.email === user?.email
                       ? "bg-cyan-500/30 border border-cyan-400/50"
@@ -111,13 +133,13 @@ export default function Settings() {
                 </div>
               ))}
 
-              {/* Add Account button redirects to login */}
+               {/* Add Account Button */}
               <button
                 onClick={() => router.push("/login")}
                 className="w-full flex items-center justify-center gap-2 mt-3 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-gray-500 font-semibold shadow-lg"
               >
-                <Plus size={18} /> Add Account
-              </button>
+                <Plus size={18} /> Add 
+              </button> 
             </div>
           )}
         </motion.div>
@@ -157,7 +179,7 @@ export default function Settings() {
           onClick={handleLogout}
           className="w-full flex items-center justify-center gap-2 mt-8 py-3 rounded-xl bg-gradient-to-r from-red-500 to-purple-600 text-gray-500 font-semibold shadow-lg"
         >
-          <LogOut size={20} /> Logout
+          <LogIn size={20} /> Log in
         </motion.button>
       </motion.div>
     </section>
