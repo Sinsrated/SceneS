@@ -57,12 +57,16 @@ export default function CreateAccount() {
 
       // ✅ Redirect to settings after creation
       router.replace("/setting");
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Failed to create account.");
-    }
-  };
+  } catch (err: unknown) {
+  console.error(err);
 
+  if (err instanceof Error) {
+    setError(err.message);
+  } else {
+    setError("Failed to create account.");
+  }
+}
+  };
   return (
     <section className="min-h-screen flex items-center justify-center bg-[url('/futuristic-bg.jpg')] bg-cover bg-center relative">
       <motion.div

@@ -43,10 +43,15 @@ export default function Login() {
       } else {
         setError("Invalid email or password.");
       }
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Login failed.");
-    }
+    } catch (err: unknown) {
+  console.error(err);
+
+  if (err instanceof Error) {
+    setError(err.message);
+  } else {
+    setError("Login failed.");
+  }
+}
   };
 
   return (
