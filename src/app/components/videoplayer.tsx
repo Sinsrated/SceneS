@@ -51,11 +51,13 @@ export default function Player({
           hls = new Hls();
           hls.loadSource(movie.watch_url);
           hls.attachMedia(video);
-        } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        } else if (video && video.canPlayType("application/vnd.apple.mpegurl")) {
           video.src = movie.watch_url;
         }
       } else {
-        video.src = movie.watch_url;
+        if (video) {
+          video.src = movie.watch_url;
+        }
       }
     }
 

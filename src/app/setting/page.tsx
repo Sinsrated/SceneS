@@ -45,7 +45,7 @@ export default function Settings() {
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
-        className="w-full max-w-2xl p-8 rounded-2xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-xl text-white relative"
+        className="w-full max-w-2xl p-8 rounded-2xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-xl text-gray relative"
       >
         <button
           onClick={() => router.replace("/home")}
@@ -103,7 +103,7 @@ export default function Settings() {
                   {acc.email !== user?.email && (
                     <button
                       onClick={() => handleSwitch(acc)}
-                      className="text-sm text-pink-400 hover:underline"
+                      className="text-sm text-red-400 hover:underline"
                     >
                       Switch
                     </button>
@@ -114,7 +114,7 @@ export default function Settings() {
               {/* Add Account button redirects to login */}
               <button
                 onClick={() => router.push("/login")}
-                className="w-full flex items-center justify-center gap-2 mt-3 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold shadow-lg"
+                className="w-full flex items-center justify-center gap-2 mt-3 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-gray-500 font-semibold shadow-lg"
               >
                 <Plus size={18} /> Add Account
               </button>
@@ -147,7 +147,7 @@ export default function Settings() {
             <Shield size={20} />
             <span className="font-medium">Privacy</span>
           </div>
-          <button className="text-sm text-pink-400 hover:underline">Configure</button>
+          <button className="text-sm text-red-400 hover:underline">Configure</button>
         </motion.div>
 
         {/* Logout */}
@@ -155,7 +155,7 @@ export default function Settings() {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 mt-8 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold shadow-lg"
+          className="w-full flex items-center justify-center gap-2 mt-8 py-3 rounded-xl bg-gradient-to-r from-red-500 to-purple-600 text-gray-500 font-semibold shadow-lg"
         >
           <LogOut size={20} /> Logout
         </motion.button>
