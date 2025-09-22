@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Play, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import Header from "../components/Header";
 import { supabase } from "../lib/supabaseClient";
+import VideoModal from "../components/videoplayer";
 
-interface MediaItem {
+interface Movie {
   id: number;
   title: string;
   poster_url: string;
@@ -16,40 +17,29 @@ interface MediaItem {
   rating: number;
   genre: string[];
   trailer_url?: string;
+  watch_url?: string; 
   created_at: string;
-  type: "movie" | "animation"; // to know where it came from
 }
 
-const CombinedMediaPage = () => {
-  const [items, setItems] = useState<MediaItem[]>([]);
-  const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
+const MoviesPage = () => {
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
   const relatedRef = React.useRef<HTMLDivElement>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
-  // ✅ Fetch both movies & animation and merge
+  // ✅ Fetch only movies
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchMovies = async () => {
       try {
-        const [{ data: movies, error: movieError }, { data: animations, error: animationError }] =
-          await Promise.all([
-            supabase.from("movies").select("*").order("created_at", { ascending: false }),
-            supabase.from("animation").select("*").order("created_at", { ascending: false }),
-          ]);
+        const { data, error } = await supabase
+          .from("movies")
+          .select("*")
+          .order("created_at", { ascending: false });
 
-        if (movieError) console.error("Error fetching movies:", movieError.message);
-        if (animationError) console.error("Error fetching animation:", animationError.message);
+        if (error) console.error("Error fetching movies:", error.message);
 
-        const formattedMovies =
-          (movies || []).map((m) => ({ ...m, type: "movie" as const })) || [];
-        const formattedAnimations =
-          (animations || []).map((a) => ({ ...a, type: "animation" as const })) || [];
-
-        // ✅ Merge & sort by created_at (latest first)
-        const combined = [...formattedMovies, ...formattedAnimations].sort(
-          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-
-        setItems(combined);
+        setMovies(data || []);
       } catch (err) {
         console.error("Unexpected fetch error:", err);
       } finally {
@@ -57,25 +47,25 @@ const CombinedMediaPage = () => {
       }
     };
 
-    fetchData();
+    fetchMovies();
   }, []);
 
-    const scrollRelated = (direction: "left" | "right") => {
-  if (relatedRef.current) {
-    const scrollAmount = 200; // adjust how much it scrolls
-    relatedRef.current.scrollBy({
-      left: direction === "left" ? -scrollAmount : scrollAmount,
-      behavior: "smooth",
-    });
-  }
-};
+  const scrollRelated = (direction: "left" | "right") => {
+    if (relatedRef.current) {
+      const scrollAmount = 200;
+      relatedRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
 
-  // ✅ Related items (same genre overlap, exclude current one)
-  const relatedItems = selectedItem
-    ? items.filter(
+  // ✅ Related movies (same genre overlap, exclude current one)
+  const relatedMovies = selectedMovie
+    ? movies.filter(
         (m) =>
-          m.id !== selectedItem.id &&
-          m.genre?.some((g) => selectedItem.genre?.includes(g))
+          m.id !== selectedMovie.id &&
+          m.genre?.some((g) => selectedMovie.genre?.includes(g))
       )
     : [];
 
@@ -83,8 +73,6 @@ const CombinedMediaPage = () => {
     <>
       <Header />
       <section className="w-full py-20 px-4 md:px-12">
-       
-
         {/* Skeleton */}
         {loading && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
@@ -104,32 +92,29 @@ const CombinedMediaPage = () => {
         )}
 
         {/* Empty */}
-        {!loading && items.length === 0 && (
+        {!loading && movies.length === 0 && (
           <p className="text-gray-400 text-center">No releases found.</p>
         )}
 
         {/* Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
-          {items.map((m) => (
+          {movies.map((movie) => (
             <motion.div
-              key={`${m.type}-${m.id}`}
+              key={movie.id}
               whileHover={{ scale: 1.05 }}
               className="bg-white/10 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden cursor-pointer hover:shadow-cyan-500/20 transition"
-              onClick={() => setSelectedItem(m)}
+              onClick={() => setSelectedMovie(movie)}
             >
               <Image
-                src={m.poster_url}
-                alt={m.title}
+                src={movie.poster_url}
+                alt={movie.title}
                 width={300}
                 height={450}
                 className="object-cover w-full h-55"
               />
               <div className="p-3">
-                <h3 className="text-white font-semibold truncate">{m.title}</h3>
-                <p className="text-sm text-gray-400">{m.year}</p>
-                <span className="text-xs text-gray-500 italic">
-                  {m.type === "movie" ? "🎬 Movie" : "✨ Animation"}
-                </span>
+                <h3 className="text-white font-semibold truncate">{movie.title}</h3>
+                <p className="text-sm text-gray-400">{movie.year}</p>
               </div>
             </motion.div>
           ))}
@@ -137,7 +122,7 @@ const CombinedMediaPage = () => {
 
         {/* Expanded Modal */}
         <AnimatePresence>
-          {selectedItem && (
+          {selectedMovie && (
             <motion.div
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
@@ -146,8 +131,8 @@ const CombinedMediaPage = () => {
             >
               <div className="bg-white/10 rounded-2xl shadow-2xl max-w-5xl w-full mx-auto p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10">
                 <Image
-                  src={selectedItem.poster_url}
-                  alt={selectedItem.title}
+                  src={selectedMovie.poster_url}
+                  alt={selectedMovie.title}
                   width={300}
                   height={450}
                   className="rounded-xl object-cover"
@@ -155,80 +140,82 @@ const CombinedMediaPage = () => {
                 <div className="flex flex-col justify-between flex-1">
                   <div>
                     <h2 className="text-3xl font-bold text-white mb-2">
-                      {selectedItem.title}
+                      {selectedMovie.title}
                     </h2>
                     <p className="text-gray-300 mb-4">
-                      {selectedItem.description}
+                      {selectedMovie.description}
                     </p>
-                    <p className="text-sm opacity-70">{selectedItem.year}</p>
+                    <p className="text-sm opacity-70">{selectedMovie.year}</p>
                     <p className="text-cyan-400 font-semibold">
-                      ⭐ {selectedItem.rating}
+                      ⭐ {selectedMovie.rating}
                     </p>
                   </div>
 
                   {/* Buttons */}
                   <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
-                    <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                      <Play size={18} />
-                    </button>
-                    <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                      <Download size={18} />
-                      Download
-                    </button>
-                    {selectedItem.trailer_url && (
-                      <a
-                        href={selectedItem.trailer_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition"
+                    {selectedMovie.trailer_url && (
+                      <button
+                        className="bg-cyan-500 px-4 py-2 rounded-xl"
+                        onClick={() => setVideoUrl(selectedMovie.trailer_url!)}
                       >
-                        <Play size={18} /> Trailer
-                      </a>
+                        Play Trailer
+                      </button>
                     )}
+
+                    {selectedMovie.watch_url && (
+                      <button
+                        className="bg-green-500 px-4 py-2 rounded-xl"
+                        onClick={() => setVideoUrl(selectedMovie.watch_url!)}
+                      >
+                        Play Movie
+                      </button>
+                    )}
+
+                    
                   </div>
 
                   {/* Related */}
-{relatedItems.length > 0 && (
-  <div className="relative mt-4">
-    <h3 className="text-xl font-bold text-white mb-3">More like this</h3>
+                  {relatedMovies.length > 0 && (
+                    <div className="relative mt-4">
+                      <h3 className="text-xl font-bold text-white mb-3">More like this</h3>
 
-    {/* Scroll buttons for desktop */}
-    <button
-      onClick={() => scrollRelated("left")}
-      className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
-    >
-      <ChevronLeft size={28} />
-    </button>
-    <button
-      onClick={() => scrollRelated("right")}
-      className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
-    >
-      <ChevronRight size={28} />
-    </button>
+                      {/* Scroll buttons for desktop */}
+                      <button
+                        onClick={() => scrollRelated("left")}
+                        className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
+                      >
+                        <ChevronLeft size={28} />
+                      </button>
+                      <button
+                        onClick={() => scrollRelated("right")}
+                        className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
+                      >
+                        <ChevronRight size={28} />
+                      </button>
 
-    <div
-      ref={relatedRef}
-      className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x"
-    >
-      {relatedItems.map((r) => (
-        <div key={`${r.type}-${r.id}`} className="flex-shrink-0 snap-start">
-          <Image
-            src={r.poster_url}
-            alt={r.title}
-            width={120}
-            height={180}
-            className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
-            onClick={() => setSelectedItem(r)}
-          />
-        </div>
-      ))}
-    </div>
-  </div>
-)}
+                      <div
+                        ref={relatedRef}
+                        className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x"
+                      >
+                        {relatedMovies.map((r) => (
+                          <div key={r.id} className="flex-shrink-0 snap-start">
+                            <Image
+                              src={r.poster_url}
+                              alt={r.title}
+                              width={120}
+                              height={180}
+                              className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
+                              onClick={() => setSelectedMovie(r)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <button
                   className="absolute top-4 right-4 text-white text-2xl"
-                  onClick={() => setSelectedItem(null)}
+                  onClick={() => setSelectedMovie(null)}
                 >
                   ✕
                 </button>
@@ -241,4 +228,4 @@ const CombinedMediaPage = () => {
   );
 };
 
-export default CombinedMediaPage;
+export default MoviesPage;

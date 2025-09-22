@@ -4,8 +4,9 @@ import { motion } from "framer-motion";
 import { User, Bell, Shield, LogOut, X, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabaseClient";
 
-type UserType = { username: string; email: string; password: string };
+type UserType = { id: string; username: string; email: string; password: string; pfp_url?: string };
 
 export default function Settings() {
   const router = useRouter();
@@ -13,23 +14,28 @@ export default function Settings() {
   const [user, setUser] = useState<UserType | null>(null);
   const [showAccounts, setShowAccounts] = useState(false);
 
+  // ✅ Fetch accounts from Supabase
   useEffect(() => {
-    const storedAccounts = localStorage.getItem("accounts");
-    const storedUser = localStorage.getItem("user");
-    if (storedAccounts) setAccounts(JSON.parse(storedAccounts));
-    if (storedUser) setUser(JSON.parse(storedUser));
+    const fetchAccounts = async () => {
+      try {
+        const { data, error } = await supabase.from("profiles").select("*");
+        if (error) throw error;
+        setAccounts(data || []);
+        // Set first account as active if none
+        if (data && data.length > 0 && !user) setUser(data[0]);
+      } catch (err) {
+        console.error("Error fetching accounts:", err);
+      }
+    };
+    fetchAccounts();
   }, []);
 
   // ✅ Switch account
-  const handleSwitch = (acc: UserType) => {
-    localStorage.setItem("user", JSON.stringify(acc));
-    setUser(acc);
-    router.refresh(); // reloads session
-  };
+  const handleSwitch = (acc: UserType) => setUser(acc);
 
   // ✅ Logout
   const handleLogout = () => {
-    localStorage.removeItem("user");
+    setUser(null);
     router.replace("/login");
   };
 
@@ -41,7 +47,6 @@ export default function Settings() {
         transition={{ duration: 0.8 }}
         className="w-full max-w-2xl p-8 rounded-2xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-xl text-white relative"
       >
-        {/* Close Button */}
         <button
           onClick={() => router.replace("/home")}
           className="absolute top-3 right-3 p-2 rounded-xl hover:bg-white/10"
@@ -73,7 +78,7 @@ export default function Settings() {
           >
             <div className="flex items-center gap-3">
               <User size={20} />
-              <span className="font-medium">Add Account</span>
+              <span className="font-medium">Accounts</span>
             </div>
             <span className="text-sm text-cyan-400">
               {showAccounts ? "x" : "+"}
@@ -106,7 +111,7 @@ export default function Settings() {
                 </div>
               ))}
 
-              {/* Add Account */}
+              {/* Add Account button redirects to login */}
               <button
                 onClick={() => router.push("/login")}
                 className="w-full flex items-center justify-center gap-2 mt-3 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold shadow-lg"
@@ -142,9 +147,7 @@ export default function Settings() {
             <Shield size={20} />
             <span className="font-medium">Privacy</span>
           </div>
-          <button className="text-sm text-pink-400 hover:underline">
-            Configure
-          </button>
+          <button className="text-sm text-pink-400 hover:underline">Configure</button>
         </motion.div>
 
         {/* Logout */}

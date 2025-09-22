@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { supabase } from "../lib/supabaseClient";
 
 export default function CreateAccount() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function CreateAccount() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   // ✅ Handle account creation
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!username || !email || !password || !confirmPassword) {
       setError("Please fill in all fields.");
       return;
@@ -30,12 +31,36 @@ export default function CreateAccount() {
 
     setError("");
 
-    // ✅ Save user data to localStorage
-    const user = { username, email, password };
-    localStorage.setItem("user", JSON.stringify(user));
+    try {
+      // Check if username or email already exists
+      const { data: existingProfiles } = await supabase
+        .from("profiles")
+        .select("*")
+        .or(`username.eq.${username},email.eq.${email}`);
 
-    // Redirect to cinematic loading screen
-    router.replace("/setting");
+      if (existingProfiles && existingProfiles.length > 0) {
+        setError("Username or email already exists.");
+        return;
+      }
+
+      // Insert new profile
+      const { error: insertError } = await supabase.from("profiles").insert([
+        {
+          username,
+          email,
+          password, // consider hashing for production
+         
+        },
+      ]);
+
+      if (insertError) throw insertError;
+
+      // ✅ Redirect to settings after creation
+      router.replace("/setting");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to create account.");
+    }
   };
 
   return (

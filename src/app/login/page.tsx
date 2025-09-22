@@ -1,12 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { User, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-type UserType = { username: string; email: string; password: string };
+import { supabase } from "../lib/supabaseClient";
 
 export default function Login() {
   const router = useRouter();
@@ -16,32 +15,37 @@ export default function Login() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  // ✅ Handle login
-  const handleLogin = () => {
+  // ✅ Handle login with Supabase
+  const handleLogin = async () => {
     if (!email || !password) {
       setError("Please enter both email and password.");
       return;
     }
 
-    // Load accounts from localStorage
-    const storedAccounts = localStorage.getItem("accounts");
-    const accounts: UserType[] = storedAccounts ? JSON.parse(storedAccounts) : [];
+    try {
+      // Query Supabase for matching profile
+      const { data: users, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("email", email)
+        .eq("password", password) // ⚠️ In production, use hashed passwords!
+        .limit(1)
+        .single();
 
-    // Find matching user
-    const foundUser = accounts.find(
-      (acc) => acc.email === email && acc.password === password
-    );
+      if (error) throw error;
 
-    if (foundUser) {
-      setError("");
+      if (users) {
+        // ✅ Save user info locally if needed
+        localStorage.setItem("user", JSON.stringify(users));
 
-      // Save current logged-in user
-      localStorage.setItem("user", JSON.stringify(foundUser));
-
-      // Redirect to cinematic loading screen
-      router.replace("/setting");
-    } else {
-      setError("Invalid email or password.");
+        // Redirect to settings
+        router.replace("/setting");
+      } else {
+        setError("Invalid email or password.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Login failed.");
     }
   };
 
@@ -57,7 +61,6 @@ export default function Login() {
           Welcome Back 🎬
         </h1>
 
-        {/* Error Message */}
         {error && (
           <p className="text-red-400 text-center mb-4 text-sm">{error}</p>
         )}
@@ -79,7 +82,7 @@ export default function Login() {
           <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
             <Lock className="text-white mr-3" size={20} />
             <input
-              type={showPassword ? "text" : "password"} // 👈 toggle type
+              type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -88,7 +91,7 @@ export default function Login() {
             <button
               type="button"
               className="ml-2 text-white"
-              onClick={() => setShowPassword(!showPassword)} // 👈 toggle password
+              onClick={() => setShowPassword(!showPassword)}
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>

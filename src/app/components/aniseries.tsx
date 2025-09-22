@@ -6,8 +6,7 @@ import { Play, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import Header from "../components/Header";
 import { supabase } from "../lib/supabaseClient";
 
-// ✅ Define AniSerie type
-interface AniSerie {
+interface Serie {
   id: number;
   title: string;
   poster_url: string;
@@ -18,23 +17,27 @@ interface AniSerie {
   episodes?: number;
   seasons?: number;
   genre?: string;
+  type?: string;
 }
 
 const LatestAniSerie = () => {
-  const [series, setSeries] = useState<AniSerie[]>([]);
-  const [selectedSerie, setSelectedSerie] = useState<AniSerie | null>(null);
+  const [series, setSeries] = useState<Serie[]>([]);
+  const [selectedSerie, setSelectedSerie] = useState<Serie | null>(null);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // ✅ Fetch from Supabase (aniserie table)
   useEffect(() => {
     const fetchSeries = async () => {
       try {
-        const { data, error } = await supabase.from("aniserie").select("*");
-        if (error) {
-          console.error("Error fetching aniseries:", error.message);
-        } else {
-          setSeries(data as AniSerie[]);
+        const { data, error } = await supabase
+  .from("series")
+  .select("*")
+  .eq("type", "animation")
+  .order("created_at", { ascending: false });
+if (error) {
+  console.error("Error fetching aniseries:", error.message);
+} else {
+  setSeries(data as Serie[]);
         }
       } catch (err) {
         console.error("Unexpected fetch error:", err);
@@ -46,7 +49,6 @@ const LatestAniSerie = () => {
     fetchSeries();
   }, []);
 
-  // ✅ scroll function for arrows
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {
       const scrollAmount = 300;
@@ -57,7 +59,6 @@ const LatestAniSerie = () => {
     }
   };
 
-  // Related series (same genre if available)
   const relatedSeries = selectedSerie
     ? series.filter(
         (s) => s.genre === selectedSerie.genre && s.id !== selectedSerie.id
@@ -68,9 +69,8 @@ const LatestAniSerie = () => {
     <>
       <Header />
       <section className="w-full py-8 relative">
-        <h2 className="text-2xl font-bold text-gray-500 mb-6"> Anime Series</h2>
+        <h2 className="text-2xl font-bold text-gray-500 mb-6">Anime Series</h2>
 
-        {/* Arrows for desktop only */}
         <button
           onClick={() => scroll("left")}
           className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
@@ -84,7 +84,6 @@ const LatestAniSerie = () => {
           <ChevronRight size={28} />
         </button>
 
-        {/* ✅ Single scrollable row */}
         <div
           ref={scrollRef}
           className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth"
@@ -95,7 +94,6 @@ const LatestAniSerie = () => {
                   key={i}
                   className="flex-shrink-0 w-[180px] bg-white/10 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden animate-pulse"
                 >
-                  {/* Poster skeleton */}
                   <div className="w-full h-[260px] bg-black/40"></div>
                 </div>
               ))
@@ -117,7 +115,6 @@ const LatestAniSerie = () => {
               ))}
         </div>
 
-        {/* Expanded Details */}
         <AnimatePresence>
           {selectedSerie && (
             <motion.div
@@ -154,21 +151,17 @@ const LatestAniSerie = () => {
                     </p>
                   </div>
 
-                  {/* Action buttons */}
                   <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
-                    {/* Play button */}
                     <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
                       <Play size={18} />
                       Play
                     </button>
 
-                    {/* Download button */}
                     <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
                       <Download size={18} />
                       Download
                     </button>
 
-                    {/* Trailer button */}
                     {selectedSerie.trailer_url && (
                       <a
                         href={selectedSerie.trailer_url}
@@ -188,10 +181,7 @@ const LatestAniSerie = () => {
                       </h3>
                       <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
                         {relatedSeries.map((m) => (
-                          <div
-                            key={m.id}
-                            className="flex-shrink-0 snap-start"
-                          >
+                          <div key={m.id} className="flex-shrink-0 snap-start">
                             <Image
                               src={m.poster_url}
                               alt={m.title}
