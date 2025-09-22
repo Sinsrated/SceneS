@@ -1,10 +1,11 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
+import type HlsType from "hls.js";
 
 type Movie = {
   id?: number;
   title?: string;
-  watch_url: string;   // Supabase column
+  watch_url: string; // Supabase column
   poster_url?: string;
 };
 
@@ -21,7 +22,7 @@ export default function Player({
   const [isYoutube, setIsYoutube] = useState(false);
   const [ytId, setYtId] = useState<string | null>(null);
 
-  // Detect YouTube
+  // Detect YouTube link
   useEffect(() => {
     const url = movie.watch_url;
     const ytRegex =
@@ -37,33 +38,42 @@ export default function Player({
     }
   }, [movie.watch_url]);
 
-  // Setup HLS only if not YouTube
+  // Setup HLS player for non-YouTube links
   useEffect(() => {
-    if (isYoutube) return; // skip
-    const video = videoRef.current;
-    if (!video) return;
-    let hls: any;
+    if (isYoutube) return;
+    let hls: HlsType | null = null;
 
     async function setup() {
-      if (movie.watch_url.endsWith(".m3u8")) {
-        const Hls = (await import("hls.js")).default;
-        if (Hls.isSupported()) {
-          hls = new Hls();
-          hls.loadSource(movie.watch_url);
-          hls.attachMedia(video);
-        } else if (video && video.canPlayType("application/vnd.apple.mpegurl")) {
-          video.src = movie.watch_url;
+      const vid = videoRef.current;
+      if (!vid) return;
+
+      try {
+        if (movie.watch_url.endsWith(".m3u8")) {
+          const HlsModule = await import("hls.js");
+          const Hls = HlsModule.default;
+
+          if (Hls.isSupported()) {
+            hls = new Hls();
+            hls.loadSource(movie.watch_url);
+            hls.attachMedia(vid);
+          } else if (vid.canPlayType("application/vnd.apple.mpegurl")) {
+            vid.src = movie.watch_url;
+          }
+        } else {
+          vid.src = movie.watch_url;
         }
-      } else {
-        if (video) {
-          video.src = movie.watch_url;
-        }
+      } catch (err) {
+        console.error("HLS setup error:", err);
       }
     }
 
     setup();
+
     return () => {
-      if (hls) hls.destroy();
+      if (hls) {
+        hls.destroy();
+        hls = null;
+      }
     };
   }, [movie.watch_url, isYoutube]);
 

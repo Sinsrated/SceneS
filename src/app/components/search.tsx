@@ -5,11 +5,25 @@ import { Search as SearchIcon, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
 
-interface Suggestion {
-  id: number | string;
-  type: "movie" | "series" | "genre" | "animation" | "drama" | "aniserie";
+interface MovieRow {
+  id: number;
   title: string;
 }
+
+interface SeriesRow {
+  id: number;
+  title: string;
+}
+
+interface GenreRow {
+  id: number;
+  name: string;
+}
+
+type Suggestion =
+  | { id: number; type: "movie"; title: string }
+  | { id: number; type: "series"; title: string }
+  | { id: number; type: "genre"; title: string };
 
 interface Props {
   compact?: boolean; // header passes compact on mobile
@@ -25,6 +39,8 @@ export default function SearchBar({ compact = false }: Props) {
   const isMountedRef = useRef(false);
 
   const [isSmall, setIsSmall] = useState<boolean>(false);
+
+  // ✅ Handle window resize
   useEffect(() => {
     const check = () =>
       setIsSmall(typeof window !== "undefined" && window.innerWidth < 768);
@@ -33,7 +49,7 @@ export default function SearchBar({ compact = false }: Props) {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // fetch all when query empty
+  // ✅ fetch all when query empty
   const fetchAll = async () => {
     setLoading(true);
     try {
@@ -44,21 +60,21 @@ export default function SearchBar({ compact = false }: Props) {
       ]);
 
       const formatted: Suggestion[] = [
-        ...(moviesRes.data?.map((m: any) => ({
+        ...(moviesRes.data?.map((m: MovieRow) => ({
           id: m.id,
           type: "movie" as const,
           title: m.title,
-        })) || []),
-        ...(seriesRes.data?.map((s: any) => ({
+        })) ?? []),
+        ...(seriesRes.data?.map((s: SeriesRow) => ({
           id: s.id,
           type: "series" as const,
           title: s.title,
-        })) || []),
-        ...(genresRes.data?.map((g: any) => ({
+        })) ?? []),
+        ...(genresRes.data?.map((g: GenreRow) => ({
           id: g.id,
           type: "genre" as const,
           title: g.name,
-        })) || []),
+        })) ?? []),
       ];
 
       formatted.sort((a, b) => a.title.localeCompare(b.title));
@@ -70,7 +86,7 @@ export default function SearchBar({ compact = false }: Props) {
     }
   };
 
-  // debounced search
+  // ✅ debounced search
   useEffect(() => {
     let mounted = true;
     const t = setTimeout(async () => {
@@ -81,29 +97,40 @@ export default function SearchBar({ compact = false }: Props) {
 
       setLoading(true);
       try {
-        const [
-          moviesRes,
-          seriesRes,
-          genresRes,
-          animationsRes,
-          dramasRes,
-          aniserieRes,
-        ] = await Promise.all([
-          supabase.from("movies").select("id, title").ilike("title", `%${query}%`).limit(10),
-          supabase.from("series").select("id, title").ilike("title", `%${query}%`).limit(10),
-          supabase.from("genres").select("id, name").ilike("name", `%${query}%`).limit(10),
-          supabase.from("animations").select("id, title").ilike("title", `%${query}%`).limit(10),
-          supabase.from("dramas").select("id, title").ilike("title", `%${query}%`).limit(10),
-          supabase.from("aniserie").select("id, title").ilike("title", `%${query}%`).limit(10),
+        const [moviesRes, seriesRes, genresRes] = await Promise.all([
+          supabase
+            .from("movies")
+            .select("id, title")
+            .ilike("title", `%${query}%`)
+            .limit(10),
+          supabase
+            .from("series")
+            .select("id, title")
+            .ilike("title", `%${query}%`)
+            .limit(10),
+          supabase
+            .from("genres")
+            .select("id, name")
+            .ilike("name", `%${query}%`)
+            .limit(10),
         ]);
 
         const formatted: Suggestion[] = [
-          ...(moviesRes.data?.map((m: any) => ({ id: m.id, type: "movie" as const, title: m.title })) || []),
-          ...(seriesRes.data?.map((s: any) => ({ id: s.id, type: "series" as const, title: s.title })) || []),
-          ...(genresRes.data?.map((g: any) => ({ id: g.id, type: "genre" as const, title: g.name })) || []),
-          ...(animationsRes.data?.map((a: any) => ({ id: a.id, type: "animation" as const, title: a.title })) || []),
-          ...(dramasRes.data?.map((d: any) => ({ id: d.id, type: "drama" as const, title: d.title })) || []),
-          ...(aniserieRes.data?.map((a: any) => ({ id: a.id, type: "aniserie" as const, title: a.title })) || []),
+          ...(moviesRes.data?.map((m: MovieRow) => ({
+            id: m.id,
+            type: "movie" as const,
+            title: m.title,
+          })) ?? []),
+          ...(seriesRes.data?.map((s: SeriesRow) => ({
+            id: s.id,
+            type: "series" as const,
+            title: s.title,
+          })) ?? []),
+          ...(genresRes.data?.map((g: GenreRow) => ({
+            id: g.id,
+            type: "genre" as const,
+            title: g.name,
+          })) ?? []),
         ];
 
         if (mounted) {
@@ -123,7 +150,7 @@ export default function SearchBar({ compact = false }: Props) {
     };
   }, [query]);
 
-  // keyboard enter/esc
+  // ✅ keyboard enter/esc
   useEffect(() => {
     if (!isMountedRef.current) {
       isMountedRef.current = true;
@@ -148,12 +175,6 @@ export default function SearchBar({ compact = false }: Props) {
       router.push(`/movies/${s.id}`);
     } else if (s.type === "series") {
       router.push(`/series/${s.id}`);
-    } else if (s.type === "drama") {
-      router.push(`/dramas/${s.id}`);
-    } else if (s.type === "aniserie") {
-      router.push(`/aniserie/${s.id}`);
-    } else if (s.type === "animation") {
-      router.push(`/animations/${s.id}`);
     } else {
       router.push(`/movies?genre=${encodeURIComponent(s.title)}`);
     }
@@ -161,7 +182,7 @@ export default function SearchBar({ compact = false }: Props) {
 
   return (
     <div className="relative w-full">
-      {/* Desktop: only show a button, not the input */}
+      {/* Desktop trigger */}
       {!open && !compact && !isSmall && (
         <button
           onClick={() => {
@@ -175,7 +196,7 @@ export default function SearchBar({ compact = false }: Props) {
         </button>
       )}
 
-      {/* Mobile/compact: same trigger */}
+      {/* Mobile trigger */}
       {!open && (compact || isSmall) && (
         <button
           onClick={() => {
@@ -189,7 +210,7 @@ export default function SearchBar({ compact = false }: Props) {
         </button>
       )}
 
-      {/* Full-screen overlay (desktop + mobile) */}
+      {/* Full-screen overlay */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -218,7 +239,7 @@ export default function SearchBar({ compact = false }: Props) {
                     <input
                       ref={inputRef}
                       type="text"
-                      placeholder="Search movies, series, drama, animation, aniserie genres..."
+                      placeholder="Search movies, series, genres..."
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       className="flex-1 bg-transparent outline-none text-white placeholder-gray-400"
@@ -228,14 +249,18 @@ export default function SearchBar({ compact = false }: Props) {
                 </div>
               </div>
 
-              {/* results */}
+              {/* Results */}
               <div className="bg-black/40 border border-white/10 rounded-xl shadow-lg overflow-hidden">
-                {loading && <div className="p-4 text-sm text-gray-300">Searching...</div>}
+                {loading && (
+                  <div className="p-4 text-sm text-gray-300">Searching...</div>
+                )}
                 {!loading && results.length === 0 && query.trim() !== "" && (
                   <div className="p-4 text-sm text-gray-400">No results</div>
                 )}
                 {!loading && results.length === 0 && query.trim() === "" && (
-                  <div className="p-4 text-sm text-gray-400">Start typing to search</div>
+                  <div className="p-4 text-sm text-gray-400">
+                    Start typing to search
+                  </div>
                 )}
                 <div className="divide-y divide-white/10">
                   {results.map((r) => (
@@ -245,7 +270,9 @@ export default function SearchBar({ compact = false }: Props) {
                       className="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-white/5 transition"
                     >
                       <span className="text-white">{r.title}</span>
-                      <span className="text-xs text-red-400 uppercase">{r.type}</span>
+                      <span className="text-xs text-red-400 uppercase">
+                        {r.type}
+                      </span>
                     </button>
                   ))}
                 </div>
