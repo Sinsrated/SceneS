@@ -1,9 +1,9 @@
 "use client";
+import Link from "next/link";
 
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { User, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
 
@@ -13,35 +13,50 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-const handleLogin = async () => {
-  if (!emailOrUsername || !password) {
-    setError("Please enter both email/username and password.");
-    return;
-  }
-
-  try {
-    // Check both email and username
-    const { data: user, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .or(`email.eq.${emailOrUsername},username.eq.${emailOrUsername}`)
-      .eq("password", password)
-      .single();
-
-    if (error || !user) {
-      setError("Invalid email/username or password.");
+  const handleLogin = async () => {
+    if (!emailOrUsername || !password) {
+      setError("Please enter both email/username and password.");
       return;
     }
 
-    // ✅ Redirect to settings with user id
-    router.replace(`/setting?userId=${user.id}`);
-  } catch (err: unknown) {
-    console.error(err);
-    setError(err instanceof Error ? err.message : "Login failed.");
-  }
-};
+    setError("");
+    setLoading(true);
 
+    try {
+      // Check for email or username in profiles
+      const { data: user, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .or(`email.eq.${emailOrUsername},username.eq.${emailOrUsername}`)
+        .eq("password", password)
+        .single();
+
+      if (error || !user) {
+        setError("Invalid email/username or password.");
+        setLoading(false);
+        return;
+      }
+
+      // Store in localStorage
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+        })
+      );
+
+      router.replace("/setting");
+    } catch (err: unknown) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : "Login failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <section className="min-h-screen flex items-center justify-center bg-[url('/futuristic-bg.jpg')] bg-cover bg-center relative">
@@ -55,20 +70,20 @@ const handleLogin = async () => {
           Welcome Back
         </h1>
 
-        {error && <p className="text-red-400 text-center mb-4 text-sm">{error}</p>}
+        {error && <p className="text-red-400 text-center mb-4">{error}</p>}
 
         <div className="space-y-4">
-     {/* Email or Username */}
-<div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
-  <User className="text-gray-300 mr-3" size={20} />
-  <input
-    type="text"
-    placeholder="Email or Username"
-    value={emailOrUsername}
-    onChange={(e) => setEmailOrUsername(e.target.value)}
-    className="bg-transparent w-full outline-none text-gray-300 placeholder-gray-300"
-  />
-</div>
+          {/* Email or Username */}
+          <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
+            <User className="text-gray-300 mr-3" size={20} />
+            <input
+              type="text"
+              placeholder="Email or Username"
+              value={emailOrUsername}
+              onChange={(e) => setEmailOrUsername(e.target.value)}
+              className="bg-transparent w-full outline-none text-gray-300 placeholder-gray-300"
+            />
+          </div>
 
           {/* Password */}
           <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
@@ -94,9 +109,10 @@ const handleLogin = async () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleLogin}
+            disabled={loading}
             className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-pink-500 to-purple-600 text-gray-300 py-3 rounded-xl font-semibold shadow-lg"
           >
-            Login <ArrowRight size={20} />
+            {loading ? "Logging in..." : "Login"} <ArrowRight size={20} />
           </motion.button>
         </div>
 

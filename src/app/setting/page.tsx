@@ -5,13 +5,12 @@ import { motion } from "framer-motion";
 import { User, Bell, Shield, LogIn, X, Plus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
-import Login from "../login/page";
 
 type UserType = {
   id: string;
   username: string;
   email: string;
-  password: string;
+  password?: string;
   pfp_url?: string;
 };
 
@@ -24,8 +23,17 @@ export default function Settings() {
   const [accounts, setAccounts] = useState<UserType[]>([]);
   const [showAccounts, setShowAccounts] = useState(false);
 
-  // ✅ Fetch the logged-in/created account only
+  // ✅ Load user from localStorage first, fallback to Supabase
   useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      setAccounts([parsedUser]);
+      return;
+    }
+
+    // If no localStorage, fetch from Supabase
     const fetchAccount = async () => {
       if (!userId) return;
 
@@ -42,20 +50,25 @@ export default function Settings() {
 
       if (data) {
         setUser(data);
-        setAccounts([data]); // Only show this account
+        setAccounts([data]);
+        localStorage.setItem("user", JSON.stringify(data));
       }
     };
 
     fetchAccount();
   }, [userId]);
 
-  // ✅ Switch account in session (optional)
-  const handleSwitch = (acc: UserType) => setUser(acc);
+  // ✅ Switch account in session
+  const handleSwitch = (acc: UserType) => {
+    setUser(acc);
+    localStorage.setItem("user", JSON.stringify(acc)); // Sync localStorage
+  };
 
   // ✅ Logout
   const handleLogout = () => {
     setUser(null);
     setAccounts([]);
+    localStorage.removeItem("user"); // Clear localStorage
     router.replace("/login");
   };
 
@@ -133,13 +146,13 @@ export default function Settings() {
                 </div>
               ))}
 
-               {/* Add Account Button */}
+              {/* Add Account Button */}
               <button
                 onClick={() => router.push("/login")}
                 className="w-full flex items-center justify-center gap-2 mt-3 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-gray-500 font-semibold shadow-lg"
               >
                 <Plus size={18} /> Add 
-              </button> 
+              </button>
             </div>
           )}
         </motion.div>

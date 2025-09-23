@@ -15,46 +15,90 @@ export default function CreateAccount() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const validateEmail = (email: string) => {
+    // Must include @domain.com
+    const regex = /^[^\s@]+@(gmail\.com|icloud\.com)$/;
+    return regex.test(email);
+  };
+
+  const validatePassword = (password: string) => {
+    // Minimum 8 characters, at least one letter and one number
+    const regex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+    return regex.test(password);
+  };
 
   const handleCreate = async () => {
-    if (!username || !email || !password || !confirmPassword) {
+    const emailTrimmed = email.trim();
+
+    if (!username || !emailTrimmed || !password || !confirmPassword) {
       setError("Please fill in all fields.");
       return;
     }
+
+    if (!validateEmail(emailTrimmed)) {
+      setError("Email must be in the format user@domain.com");
+      return;
+    }
+
+    if (!validatePassword(password)) {
+      setError(
+        "Password must be at least 8 characters and include at least one letter and one number."
+      );
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
 
     setError("");
+    setLoading(true);
 
     try {
-      // Check if username or email exists
+      // Check for existing username or email
       const { data: existingProfiles } = await supabase
         .from("profiles")
         .select("*")
-        .or(`username.eq.${username},email.eq.${email}`);
+        .or(`username.eq.${username},email.eq.${emailTrimmed}`);
 
       if (existingProfiles && existingProfiles.length > 0) {
         setError("Username or email already exists.");
+        setLoading(false);
         return;
       }
 
       // Insert new profile
       const { data: insertedProfile, error: insertError } = await supabase
         .from("profiles")
-        .insert([{ username, email, password }])
+        .insert([{ username, email: emailTrimmed, password }])
         .select()
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError || !insertedProfile) {
+        setError(insertError?.message || "Failed to create account.");
+        setLoading(false);
+        return;
+      }
 
-      // ✅ Redirect to settings with the new user id
-      router.replace(`/setting?userId=${insertedProfile.id}`);
+      // Store user in localStorage
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          id: insertedProfile.id,
+          username: insertedProfile.username,
+          email: insertedProfile.email,
+        })
+      );
+
+      router.replace("/setting");
     } catch (err: unknown) {
       console.error(err);
-      if (err instanceof Error) setError(err.message);
-      else setError("Failed to create account.");
+      setError(err instanceof Error ? err.message : "Failed to create account.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -140,9 +184,10 @@ export default function CreateAccount() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleCreate}
+            disabled={loading}
             className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3 rounded-xl font-semibold shadow-lg"
           >
-            Create Account <ArrowRight size={20} />
+            {loading ? "Creating..." : "Create Account"} <ArrowRight size={20} />
           </motion.button>
         </div>
       </motion.div>
