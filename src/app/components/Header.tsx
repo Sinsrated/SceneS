@@ -95,7 +95,7 @@ const Navbar = () => {
         </div>
         <div className="flex-1 ml-4">
           {/* mobile uses same Search component (responsible for its own layout) */}
-          <Search compact />
+          <Search  />
         </div>
       </header>
 

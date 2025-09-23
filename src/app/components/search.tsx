@@ -1,11 +1,10 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search as SearchIcon, ArrowLeft, Play, Bookmark } from "lucide-react";
 import Image from "next/image";
 import { supabase } from "../lib/supabaseClient";
 
-// ✅ Unified Item type
 export interface Item {
   id: number;
   title: string;
@@ -18,10 +17,6 @@ export interface Item {
   episode?: number;
   seasons?: number;
   type: "movie" | "series";
-}
-
-interface Props {
-  compact?: boolean;
 }
 
 interface Season {
@@ -37,7 +32,7 @@ interface Episode {
   watch_url?: string;
 }
 
-export default function SearchBar({ compact = false }: Props) {
+export default function SearchBar() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
@@ -51,30 +46,29 @@ export default function SearchBar({ compact = false }: Props) {
 
   // ✅ Handle window resize
   useEffect(() => {
-    const check = () =>
-      setIsSmall(typeof window !== "undefined" && window.innerWidth < 768);
+    const check = () => setIsSmall(typeof window !== "undefined" && window.innerWidth < 768);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
 
   // ✅ Normalize function
-  const normalize = (row: any, type: "movie" | "series"): Item => ({
-    id: row.id,
-    title: row.title,
-    poster_url: row.poster_url || "/placeholder.png",
-    description: row.description || "No description available",
-    year: row.year || "",
-    genre: row.genre || [],
-    watch_url: row.watch_url || null,
-    trailer_url: row.trailer_url || null,
-    episode: row.episode || undefined,
-    seasons: row.seasons || undefined,
+  const normalize = (row: Record<string, unknown>, type: "movie" | "series"): Item => ({
+    id: Number(row.id),
+    title: String(row.title),
+    poster_url: String(row.poster_url ?? "/placeholder.png"),
+    description: String(row.description ?? "No description available"),
+    year: row.year ? String(row.year) : undefined,
+    genre: Array.isArray(row.genre) ? (row.genre as string[]) : [],
+    watch_url: row.watch_url ? String(row.watch_url) : undefined,
+    trailer_url: row.trailer_url ? String(row.trailer_url) : undefined,
+    episode: row.episode ? Number(row.episode) : undefined,
+    seasons: row.seasons ? Number(row.seasons) : undefined,
     type,
   });
 
   // ✅ Fetch all initial data
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
       const [moviesRes, seriesRes] = await Promise.all([
@@ -93,14 +87,59 @@ export default function SearchBar({ compact = false }: Props) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // ✅ Open suggestion + fetch series details
+  const openSuggestion = useCallback(
+    async (s: Item) => {
+      setSelectedItem(s);
+      setOpen(false);
+      const related = results.filter((r) => r.type === s.type && r.id !== s.id).slice(0, 10);
+      setRelatedItems(related);
+
+      if (s.type === "series") {
+        const { data: seasonsData } = await supabase
+          .from("seasons")
+          .select("id, season_number")
+          .eq("series_id", s.id)
+          .order("season_number");
+
+        if (seasonsData) {
+          const seasonsWithEpisodes: Season[] = [];
+          for (const season of seasonsData) {
+            const { data: episodesData } = await supabase
+              .from("episodes")
+              .select("id, title, episode_number, watch_url")
+              .eq("season_id", season.id)
+              .order("episode_number");
+
+            seasonsWithEpisodes.push({
+              id: Number(season.id),
+              season_number: Number(season.season_number),
+              episodes:
+                episodesData?.map((ep) => ({
+                  id: Number(ep.id),
+                  title: String(ep.title),
+                  episode_number: Number(ep.episode_number),
+                  watch_url: ep.watch_url ? String(ep.watch_url) : undefined,
+                })) ?? [],
+            });
+          }
+          setSeriesDetails(seasonsWithEpisodes);
+        }
+      } else {
+        setSeriesDetails([]);
+      }
+    },
+    [results]
+  );
 
   // ✅ Debounced search
   useEffect(() => {
     let mounted = true;
     const t = setTimeout(async () => {
       if (!query.trim()) {
-        fetchAll();
+        await fetchAll();
         return;
       }
       setLoading(true);
@@ -132,11 +171,12 @@ export default function SearchBar({ compact = false }: Props) {
         if (mounted) setLoading(false);
       }
     }, 300);
+
     return () => {
       mounted = false;
       clearTimeout(t);
     };
-  }, [query]);
+  }, [query, fetchAll]);
 
   // ✅ Keyboard shortcuts
   useEffect(() => {
@@ -150,48 +190,12 @@ export default function SearchBar({ compact = false }: Props) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [results, open]);
-
-  // ✅ Open suggestion + fetch series details if needed
-  const openSuggestion = async (s: Item) => {
-    setSelectedItem(s);
-    const related = results
-      .filter((r) => r.type === s.type && r.id !== s.id)
-      .slice(0, 10);
-    setRelatedItems(related);
-
-    if (s.type === "series") {
-      const { data: seasonsData } = await supabase
-        .from("seasons")
-        .select("id, season_number")
-        .eq("series_id", s.id)
-        .order("season_number");
-
-      if (seasonsData) {
-        const seasonsWithEpisodes: Season[] = [];
-        for (const season of seasonsData) {
-          const { data: episodesData } = await supabase
-            .from("episodes")
-            .select("id, title, episode_number, watch_url")
-            .eq("season_id", season.id)
-            .order("episode_number");
-          seasonsWithEpisodes.push({
-            id: season.id,
-            season_number: season.season_number,
-            episodes: episodesData ?? [],
-          });
-        }
-        setSeriesDetails(seasonsWithEpisodes);
-      }
-    } else {
-      setSeriesDetails([]);
-    }
-  };
+  }, [results, open, openSuggestion]);
 
   return (
     <div className="relative w-full">
       {/* 🔍 Search button */}
-      {!open && (
+      {!open && !selectedItem && (
         <button
           onClick={() => {
             setOpen(true);
@@ -205,8 +209,8 @@ export default function SearchBar({ compact = false }: Props) {
       )}
 
       {/* 🖥 Desktop suggestions dropdown */}
-      {!isSmall && open && results.length > 0 && (
-        <div className="absolute top-full mt-2 w-64 max-h-80 overflow-y-auto bg-black/80 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg z-50">
+      {!isSmall && open && !selectedItem && results.length > 0 && (
+        <div className="animate-presence-scroll absolute top-full mt-2 w-full max-h-80 overflow-y-auto bg-black/80 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg z-50">
           {results.map((r) => (
             <button
               key={`${r.type}-${r.id}`}
@@ -291,7 +295,7 @@ export default function SearchBar({ compact = false }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-lg overflow-y-auto scrollbar-hide p-4"
+            className="animate-presnce-scroll fixed inset-0 z-50 bg-black/70 backdrop-blur-lg overflow-y-auto scrollbar-hide p-4"
           >
             <div className="max-w-5xl mx-auto bg-white/10 rounded-2xl p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10 shadow-2xl">
               <Image
@@ -316,7 +320,6 @@ export default function SearchBar({ compact = false }: Props) {
                   <p className="text-sm text-gray-300 mb-2">{selectedItem.year} • {selectedItem.genre?.join(", ")}</p>
                 </div>
 
-                {/* ✅ Show seasons + episodes if series */}
                 {selectedItem.type === "series" && seriesDetails.length > 0 && (
                   <div className="mt-6">
                     <h3 className="text-xl font-bold text-white mb-3">Seasons</h3>
@@ -329,7 +332,7 @@ export default function SearchBar({ compact = false }: Props) {
                               <span className="text-white">Ep {ep.episode_number}: {ep.title}</span>
                               {ep.watch_url && (
                                 <button
-                                  onClick={() => window.open(ep.watch_url!, "_blank")}
+                                  onClick={() => window.open(ep.watch_url, "_blank")}
                                   className="text-sm px-3 py-1 bg-red-500 rounded-lg text-white"
                                 >
                                   Watch
@@ -366,10 +369,7 @@ export default function SearchBar({ compact = false }: Props) {
                     </h3>
                     <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
                       {relatedItems.map((i) => (
-                        <div
-                          key={`${i.type}-${i.id}`}
-                          className="flex-shrink-0 snap-start"
-                        >
+                        <div key={`${i.type}-${i.id}`} className="flex-shrink-0 snap-start">
                           <Image
                             src={i.poster_url || "/placeholder.png"}
                             alt={i.title}
