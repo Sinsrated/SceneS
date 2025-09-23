@@ -7,7 +7,7 @@ import LatestMovies from "../components/latestm";
 import LatestSeries from "../components/latests";
 import Animation from "../components/animation";
 import LatestDrama from "../components/latestd";
-import LatestAniSerie from "../components/aniseries";
+import AniSerie from "../components/aniseries";
 
 
 export default function Home() {
@@ -19,12 +19,10 @@ export default function Home() {
      <Header />
      <Trending />
      <LatestMovies />
-      <LatestSeries />
-     <LatestDrama />
-     
-     <LatestAniSerie />
-    
      <Animation />
+     <LatestSeries />
+     <LatestDrama />
+     <AniSerie />
      <Footer /> 
      </> 
    );

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import  React,{ useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Download, ChevronLeft, ChevronRight, Bookmark } from "lucide-react";
@@ -10,7 +10,7 @@ interface Item {
   type: "movie" | "series";
   title: string;
   poster_url: string;
-  backdrop_url?: string;
+  backdrop_url: string;
   description: string;
   year: string;
   rating?: number;
@@ -26,6 +26,7 @@ const Trending = () => {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const relatedRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -91,6 +92,16 @@ const Trending = () => {
 
     fetchData();
   }, []);
+
+   const scrollRelated = (direction: "left" | "right") => {
+    if (relatedRef.current) {
+      const scrollAmount = 200;
+      relatedRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  }; 
 
   const relatedItems = selectedItem
     ? items.filter(
@@ -175,7 +186,7 @@ const Trending = () => {
                   initial={{ opacity: 0, y: 50 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 50 }}
-                  className="fixed inset-0 bg-black/70 backdrop-blur-lg z-50 p-4 overflow-y-auto"
+                  className="animate-presence-scroll fixed inset-0 bg-black/70 backdrop-blur-lg z-50 p-4 overflow-y-auto"
                 >
                   <div className="bg-white/10 rounded-2xl top-15 shadow-2xl max-w-5xl w-full mx-auto p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10">
                     <Image
@@ -218,26 +229,47 @@ const Trending = () => {
                         </button>
                       </div>
       
-                      {/* More like this */}
-                      {relatedItems.length > 0 && (
-                        <div>
-                          <h3 className="text-xl font-bold text-white mb-3">More like {selectedItem.title}</h3>
-                          <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
-                            {relatedItems.map((i) => (
-                              <div key={`${i.type}-${i.id}`} className="flex-shrink-0 snap-start">
-                                <Image
-                                  src={i.poster_url}
-                                  alt={i.title}
-                                  width={120}
-                                  height={180}
-                                  className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
-                                  onClick={() => setSelectedItem(i)}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+{/* More like this */}
+{relatedItems.length > 0 && (
+  <div className="relative mt-6">
+    <h3 className="text-xl font-bold text-white mb-3">
+      More like {selectedItem.title}
+    </h3>
+
+    {/* Scroll buttons for desktop */}
+    <button
+      onClick={() => scrollRelated("left")}
+      className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
+    >
+      <ChevronLeft size={28} />
+    </button>
+    <button
+      onClick={() => scrollRelated("right")}
+      className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
+    >
+      <ChevronRight size={28} />
+    </button>
+
+    {/* Scrollable container */}
+    <div
+      ref={relatedRef}
+      className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x"
+    >
+      {relatedItems.map((i) => (
+        <div key={`${i.type}-${i.id}`} className="flex-shrink-0 snap-start">
+          <Image
+            src={i.poster_url}
+            alt={i.title}
+            width={120}
+            height={180}
+            className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
+            onClick={() => setSelectedItem(i)}
+          />
+        </div>
+      ))}
+    </div>
+  </div>
+)}
                     </div>
       
                     <button

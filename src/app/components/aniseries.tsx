@@ -10,34 +10,36 @@ interface Serie {
   id: number;
   title: string;
   poster_url: string;
+  backdrop_url: string;
   description: string;
   year: string;
   trailer_url?: string;
   rating: number;
   episodes?: number;
   seasons?: number;
-  genre?: string;
+  genre: string[];
   type?: string;
 }
 
-const LatestAniSerie = () => {
+const AniSeries = () => {
   const [series, setSeries] = useState<Serie[]>([]);
   const [selectedSerie, setSelectedSerie] = useState<Serie | null>(null);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const relatedRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchSeries = async () => {
       try {
         const { data, error } = await supabase
-  .from("series")
-  .select("*")
-  .eq("type", "animation")
-  .order("created_at", { ascending: false });
-if (error) {
-  console.error("Error fetching aniseries:", error.message);
-} else {
-  setSeries(data as Serie[]);
+          .from("series")
+          .select("*")
+          .eq("type", "animation")
+          .order("created_at", { ascending: false });
+        if (error) {
+          console.error("Error fetching serie:", error.message);
+        } else {
+          setSeries(data as Serie[]);
         }
       } catch (err) {
         console.error("Unexpected fetch error:", err);
@@ -45,7 +47,6 @@ if (error) {
         setLoading(false);
       }
     };
-
     fetchSeries();
   }, []);
 
@@ -59,18 +60,32 @@ if (error) {
     }
   };
 
-  const relatedSeries = selectedSerie
-    ? series.filter(
-        (s) => s.genre === selectedSerie.genre && s.id !== selectedSerie.id
-      )
-    : [];
+  const scrollRelated = (direction: "left" | "right") => {
+    if (relatedRef.current) {
+      const scrollAmount = 200;
+      relatedRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const relatedSeries = React.useMemo(() => {
+    if (!selectedSerie || !selectedSerie.genre || selectedSerie.genre.length === 0) return [];
+    return series.filter((s) => {
+      if (s.id === selectedSerie.id) return false;
+      if (!s.genre || s.genre.length === 0) return false;
+      return s.genre.some((g) => selectedSerie.genre.includes(g));
+    });
+  }, [selectedSerie, series]);
 
   return (
     <>
-      <Header />
+      
       <section className="w-full py-8 relative">
         <h2 className="text-2xl font-bold text-gray-500 mb-6">Anime Series</h2>
 
+        {/* Scroll buttons for latest series */}
         <button
           onClick={() => scroll("left")}
           className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
@@ -121,7 +136,7 @@ if (error) {
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 50 }}
-              className="fixed inset-0 bg-black/70 backdrop-blur-lg z-50 p-4 overflow-y-auto"
+              className="animate-presence-scroll fixed inset-0  bg-black/70 backdrop-blur-lg z-50 p-4 overflow-y-auto"
             >
               <div className="bg-white/10 rounded-2xl shadow-2xl max-w-5xl w-full mx-auto p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10">
                 <Image
@@ -153,13 +168,11 @@ if (error) {
 
                   <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
                     <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                      <Play size={18} />
-                      Play
+                      <Play size={18} /> Play
                     </button>
 
                     <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                      <Download size={18} />
-                      Download
+                      <Download size={18} /> Download
                     </button>
 
                     {selectedSerie.trailer_url && (
@@ -174,28 +187,50 @@ if (error) {
                     )}
                   </div>
 
+                  {/* More like this */}
                   {relatedSeries.length > 0 && (
-                    <div>
+                    <div className="relative mt-6">
                       <h3 className="text-xl font-bold text-white mb-3">
-                        More like this
+                        More like {selectedSerie.title}
                       </h3>
-                      <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
-                        {relatedSeries.map((m) => (
-                          <div key={m.id} className="flex-shrink-0 snap-start">
-                            <Image
-                              src={m.poster_url}
-                              alt={m.title}
-                              width={120}
-                              height={180}
-                              className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
-                              onClick={() => setSelectedSerie(m)}
-                            />
-                          </div>
-                        ))}
+
+                      <div className="relative">
+                        {/* Scroll buttons for related series */}
+                        <button
+                          onClick={() => scrollRelated("left")}
+                          className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
+                        >
+                          <ChevronLeft size={28} />
+                        </button>
+                        <button
+                          onClick={() => scrollRelated("right")}
+                          className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
+                        >
+                          <ChevronRight size={28} />
+                        </button>
+
+                        <div
+                          ref={relatedRef}
+                          className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x"
+                        >
+                          {relatedSeries.map((s) => (
+                            <div key={s.id} className="flex-shrink-0 snap-start">
+                              <Image
+                                src={s.poster_url}
+                                alt={s.title}
+                                width={150}
+                                height={180}
+                                className="rounded-lg h-20 w-full object-cover cursor-pointer hover:scale-105 transition"
+                                onClick={() => setSelectedSerie(s)}
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
                 </div>
+
                 <button
                   className="absolute top-4 right-4 text-white text-2xl"
                   onClick={() => setSelectedSerie(null)}
@@ -211,4 +246,4 @@ if (error) {
   );
 };
 
-export default LatestAniSerie;
+export default AniSeries;

@@ -41,3 +41,14 @@ body {
   scrollbar-width: none;
 }
 
+
+.animate-presence-scroll {
+  overflow: auto; 
+  -ms-overflow-style: none; 
+  scrollbar-width: none; 
+}
+
+.animate-presence-scroll::-webkit-scrollbar {
+  display: none; 
+}
+

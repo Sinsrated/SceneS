@@ -11,7 +11,7 @@ interface Movie {
   id: number;
   title: string;
   poster_url: string;
-  backdrop_url?: string;
+  backdrop_url: string;
   description: string;
   year: string;
   rating: number;
@@ -127,9 +127,9 @@ const MoviesPage = () => {
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 50 }}
-              className="fixed inset-0 bg-black/70 backdrop-blur-lg z-50 p-4 overflow-y-auto"
+              className="animate-presence-scroll fixed inset-0 bg-black/70 backdrop-blur-lg z-50 p-4 overflow-y-auto"
             >
-              <div className="bg-white/10 rounded-2xl shadow-2xl max-w-5xl w-full mx-auto p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10">
+              <div className="bg-white/5 rounded-2xl shadow-2xl max-w-5xl w-full mx-auto p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10">
                 <Image
                   src={selectedMovie.poster_url}
                   alt={selectedMovie.title}
@@ -177,7 +177,7 @@ const MoviesPage = () => {
                   {/* Related */}
                   {relatedMovies.length > 0 && (
                     <div className="relative mt-4">
-                      <h3 className="text-xl font-bold text-white mb-3">More like this</h3>
+                      <h3 className="text-xl font-bold text-white mb-3">More like {selectedMovie.title}</h3>
 
                       {/* Scroll buttons for desktop */}
                       <button
