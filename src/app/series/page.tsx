@@ -113,9 +113,9 @@ const SeriesPage = () => {
                 className="object-cover w-full h-55"
               />
               <div className="p-3">
-                <h3 className="text-white font-semibold truncate">{s.title}</h3>
+                <h3 className="text-gray-500 font-semibold truncate">{s.title}</h3>
                 <p className="text-sm text-gray-400">{s.year}</p>
-                <span className="text-xs text-gray-500 italic">📺 Series</span>
+                
               </div>
             </motion.div>
           ))}
@@ -187,7 +187,7 @@ const SeriesPage = () => {
                   {relatedSeries.length > 0 && (
                     <div className="relative mt-4">
                       <h3 className="text-xl font-bold text-white mb-3">
-                        More like this
+                        More like {selectedSeries.title}
                       </h3>
 
                       <button

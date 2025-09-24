@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search as SearchIcon, ArrowLeft, Play, Bookmark } from "lucide-react";
 import Image from "next/image";
+import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabaseClient";
 
 export interface Item {
@@ -40,11 +41,29 @@ export default function SearchBar() {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [relatedItems, setRelatedItems] = useState<Item[]>([]);
   const [seriesDetails, setSeriesDetails] = useState<Season[]>([]);
+
   const inputRef = useRef<HTMLInputElement | null>(null);
   const isMountedRef = useRef(false);
+  const portalRef = useRef<HTMLDivElement | null>(null);
+
   const [isSmall, setIsSmall] = useState(false);
 
-  // ✅ Handle window resize
+  // create portal root on mount
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const el = document.createElement("div");
+    el.setAttribute("id", "search-portal");
+    document.body.appendChild(el);
+    portalRef.current = el;
+    return () => {
+      if (portalRef.current) {
+        document.body.removeChild(portalRef.current);
+        portalRef.current = null;
+      }
+    };
+  }, []);
+
+  // track screen size
   useEffect(() => {
     const check = () => setIsSmall(typeof window !== "undefined" && window.innerWidth < 768);
     check();
@@ -52,7 +71,7 @@ export default function SearchBar() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // ✅ Normalize function
+  // normalize helper
   const normalize = (row: Record<string, unknown>, type: "movie" | "series"): Item => ({
     id: Number(row.id),
     title: String(row.title),
@@ -67,7 +86,7 @@ export default function SearchBar() {
     type,
   });
 
-  // ✅ Fetch all initial data
+  // fetch all
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
@@ -89,7 +108,7 @@ export default function SearchBar() {
     }
   }, []);
 
-  // ✅ Open suggestion + fetch series details
+  // open suggestion (loads series details if needed)
   const openSuggestion = useCallback(
     async (s: Item) => {
       setSelectedItem(s);
@@ -134,7 +153,7 @@ export default function SearchBar() {
     [results]
   );
 
-  // ✅ Debounced search
+  // search effect (debounced)
   useEffect(() => {
     let mounted = true;
     const t = setTimeout(async () => {
@@ -145,16 +164,8 @@ export default function SearchBar() {
       setLoading(true);
       try {
         const [moviesRes, seriesRes] = await Promise.all([
-          supabase
-            .from("movies")
-            .select("*")
-            .ilike("title", `%${query}%`)
-            .limit(10),
-          supabase
-            .from("series")
-            .select("*")
-            .ilike("title", `%${query}%`)
-            .limit(10),
+          supabase.from("movies").select("*").ilike("title", `%${query}%`).limit(10),
+          supabase.from("series").select("*").ilike("title", `%${query}%`).limit(10),
         ]);
 
         const formatted: Item[] = [
@@ -178,7 +189,7 @@ export default function SearchBar() {
     };
   }, [query, fetchAll]);
 
-  // ✅ Keyboard shortcuts
+  // keyboard shortcuts
   useEffect(() => {
     if (!isMountedRef.current) {
       isMountedRef.current = true;
@@ -192,10 +203,198 @@ export default function SearchBar() {
     return () => window.removeEventListener("keydown", onKey);
   }, [results, open, openSuggestion]);
 
+  // helper: render overlay into portal if available (falls back to inline)
+  const renderPortal = (content: React.ReactElement) => {
+    if (portalRef.current) return createPortal(content, portalRef.current);
+    return content;
+  };
+
+  // when opening, focus input
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 50);
+  }, [open]);
+
+  /* ----------------- UI ----------------- */
+  const searchOverlay = (
+    <AnimatePresence>
+      {open && !selectedItem && (
+        <motion.div
+          key="search-full"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[9998] bg-black/80 backdrop-blur-lg p-4 overflow-y-auto scrollbar-hide"
+        >
+          <div className="max-w-3xl mx-auto">
+            <div className="flex items-center gap-3 mb-4">
+              <button
+                className="p-2 rounded-md text-white"
+                onClick={() => {
+                  setOpen(false);
+                  setQuery("");
+                  setResults([]);
+                }}
+                aria-label="Close search"
+              >
+                <ArrowLeft />
+              </button>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/5 border border-white/10">
+                  <SearchIcon className="text-red-400" size={20} />
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    placeholder="Search movies, series..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    className="flex-1 bg-transparent outline-none text-white placeholder-gray-400"
+                    autoFocus
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-black/40 border border-white/10 rounded-xl shadow-lg overflow-hidden">
+              {loading && <div className="p-4 text-sm text-gray-300">Searching...</div>}
+              {!loading && results.length === 0 && query.trim() !== "" && (
+                <div className="p-4 text-sm text-gray-400">No results</div>
+              )}
+              {!loading && results.length === 0 && query.trim() === "" && (
+                <div className="p-4 text-sm text-gray-400">Start typing to search</div>
+              )}
+              <div className="divide-y divide-white/10">
+                {results.map((r) => (
+                  <button
+                    key={`${r.type}-${r.id}`}
+                    onClick={() => openSuggestion(r)}
+                    className="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-white/5 transition"
+                  >
+                    <span className="text-white">{r.title}</span>
+                    <span className="text-xs text-red-400 uppercase">{r.type}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
+  const selectedOverlay = (
+    <AnimatePresence>
+      {selectedItem && (
+        <motion.div
+          key="selected-item"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-lg overflow-y-auto scrollbar-hide p-4"
+        >
+          <div className="max-w-5xl mx-auto bg-white/10 rounded-2xl p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10 shadow-2xl">
+            <Image
+              src={selectedItem.poster_url || "/placeholder.png"}
+              alt={selectedItem.title}
+              width={300}
+              height={450}
+              className="rounded-xl object-cover"
+            />
+            <div className="flex flex-col justify-between flex-1">
+              <div>
+                <h2 className="text-3xl font-bold text-white mb-2">{selectedItem.title}</h2>
+                {selectedItem.watch_url && (
+                  <button
+                    onClick={() => window.open(selectedItem.watch_url, "_blank")}
+                    className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition mb-4"
+                  >
+                    <Play size={18} /> Watch
+                  </button>
+                )}
+                <p className="text-gray-300 mb-4">{selectedItem.description}</p>
+                <p className="text-sm text-gray-300 mb-2">
+                  {selectedItem.year} • {selectedItem.genre?.join(", ")}
+                </p>
+              </div>
+
+              {selectedItem.type === "series" && seriesDetails.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-xl font-bold text-white mb-3">Seasons</h3>
+                  {seriesDetails.map((season) => (
+                    <div key={season.id} className="mb-4">
+                      <h4 className="text-lg font-semibold text-red-400 mb-2">Season {season.season_number}</h4>
+                      <ul className="space-y-2">
+                        {season.episodes.map((ep) => (
+                          <li key={ep.id} className="flex items-center justify-between bg-white/5 px-3 py-2 rounded-lg">
+                            <span className="text-white">Ep {ep.episode_number}: {ep.title}</span>
+                            {ep.watch_url && (
+                              <button
+                                onClick={() => window.open(ep.watch_url!, "_blank")}
+                                className="text-sm px-3 py-1 bg-red-500 rounded-lg text-white"
+                              >
+                                Watch
+                              </button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-4 mb-6 mt-4">
+                {selectedItem.trailer_url && (
+                  <a
+                    href={selectedItem.trailer_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition"
+                  >
+                    <Play size={18} /> Trailer
+                  </a>
+                )}
+                <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
+                  <Bookmark size={18} /> Save
+                </button>
+              </div>
+
+              {relatedItems.length > 0 && (
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-3">More like {selectedItem.title}</h3>
+                  <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
+                    {relatedItems.map((i) => (
+                      <div key={`${i.type}-${i.id}`} className="flex-shrink-0 snap-start">
+                        <Image
+                          src={i.poster_url || "/placeholder.png"}
+                          alt={i.title}
+                          width={120}
+                          height={180}
+                          className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
+                          onClick={() => openSuggestion(i)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button
+              className="absolute top-4 right-4 text-white text-2xl"
+              onClick={() => setSelectedItem(null)}
+            >
+              ✕
+            </button>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   return (
     <div className="relative w-full">
-      {/* 🔍 Search button */}
-      {!open && !selectedItem && (
+      {/* Desktop trigger */}
+      {!open && !selectedItem && !isSmall && (
         <button
           onClick={() => {
             setOpen(true);
@@ -208,193 +407,23 @@ export default function SearchBar() {
         </button>
       )}
 
-      {/* 🖥 Desktop suggestions dropdown */}
-      {!isSmall && open && !selectedItem && results.length > 0 && (
-        <div className="animate-presence-scroll absolute top-full mt-2 w-full max-h-80 overflow-y-auto bg-black/80 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg z-50">
-          {results.map((r) => (
-            <button
-              key={`${r.type}-${r.id}`}
-              onClick={() => openSuggestion(r)}
-              className="w-full text-left px-4 py-2 flex items-center justify-between hover:bg-white/10 transition"
-            >
-              <span className="text-white">{r.title}</span>
-              <span className="text-xs text-red-400 uppercase">{r.type}</span>
-            </button>
-          ))}
-        </div>
+      {/* Mobile trigger */}
+      {!open && !selectedItem && isSmall && (
+        <button
+          onClick={() => {
+            setOpen(true);
+            setTimeout(() => inputRef.current?.focus(), 50);
+          }}
+          className="flex items-center w-64 gap-2 px-4 py-2 rounded-2xl bg-white/5 backdrop-blur-x1 border border-white/5 text-gray-500"
+        >
+          <SearchIcon className="text-red-400" size={20} />
+          <span>Search</span>
+        </button>
       )}
 
-      {/* 🔲 Fullscreen mobile overlay */}
-      <AnimatePresence>
-        {open && !selectedItem && isSmall && (
-          <motion.div
-            key="search-full"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-lg p-4 overflow-y-auto scrollbar-hide"
-          >
-            <div className="max-w-3xl mx-auto">
-              <div className="flex items-center gap-3 mb-4">
-                <button
-                  className="p-2 rounded-md text-white"
-                  onClick={() => {
-                    setOpen(false);
-                    setQuery("");
-                    setResults([]);
-                  }}
-                >
-                  <ArrowLeft />
-                </button>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/5 border border-white/10">
-                    <SearchIcon className="text-red-400" size={20} />
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      placeholder="Search movies, series..."
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      className="flex-1 bg-transparent outline-none text-white placeholder-gray-400"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-black/40 border border-white/10 rounded-xl shadow-lg overflow-hidden">
-                {loading && <div className="p-4 text-sm text-gray-300">Searching...</div>}
-                {!loading && results.length === 0 && query.trim() !== "" && (
-                  <div className="p-4 text-sm text-gray-400">No results</div>
-                )}
-                {!loading && results.length === 0 && query.trim() === "" && (
-                  <div className="p-4 text-sm text-gray-400">Start typing to search</div>
-                )}
-                <div className="divide-y divide-white/10">
-                  {results.map((r) => (
-                    <button
-                      key={`${r.type}-${r.id}`}
-                      onClick={() => openSuggestion(r)}
-                      className="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-white/5 transition"
-                    >
-                      <span className="text-white">{r.title}</span>
-                      <span className="text-xs text-red-400 uppercase">{r.type}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 🎬 Selected item overlay */}
-      <AnimatePresence>
-        {selectedItem && (
-          <motion.div
-            key="selected-item"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="animate-presnce-scroll fixed inset-0 z-50 bg-black/70 backdrop-blur-lg overflow-y-auto scrollbar-hide p-4"
-          >
-            <div className="max-w-5xl mx-auto bg-white/10 rounded-2xl p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10 shadow-2xl">
-              <Image
-                src={selectedItem.poster_url || "/placeholder.png"}
-                alt={selectedItem.title}
-                width={300}
-                height={450}
-                className="rounded-xl object-cover"
-              />
-              <div className="flex flex-col justify-between flex-1">
-                <div>
-                  <h2 className="text-3xl font-bold text-white mb-2">{selectedItem.title}</h2>
-                  {selectedItem.watch_url && (
-                    <button
-                      onClick={() => window.open(selectedItem.watch_url, "_blank")}
-                      className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition mb-4"
-                    >
-                      <Play size={18} /> Watch
-                    </button>
-                  )}
-                  <p className="text-gray-300 mb-4">{selectedItem.description}</p>
-                  <p className="text-sm text-gray-300 mb-2">{selectedItem.year} • {selectedItem.genre?.join(", ")}</p>
-                </div>
-
-                {selectedItem.type === "series" && seriesDetails.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="text-xl font-bold text-white mb-3">Seasons</h3>
-                    {seriesDetails.map((season) => (
-                      <div key={season.id} className="mb-4">
-                        <h4 className="text-lg font-semibold text-red-400 mb-2">Season {season.season_number}</h4>
-                        <ul className="space-y-2">
-                          {season.episodes.map((ep) => (
-                            <li key={ep.id} className="flex items-center justify-between bg-white/5 px-3 py-2 rounded-lg">
-                              <span className="text-white">Ep {ep.episode_number}: {ep.title}</span>
-                              {ep.watch_url && (
-                                <button
-                                  onClick={() => window.open(ep.watch_url, "_blank")}
-                                  className="text-sm px-3 py-1 bg-red-500 rounded-lg text-white"
-                                >
-                                  Watch
-                                </button>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex gap-4 mb-6 mt-4">
-                  {selectedItem.trailer_url && (
-                    <a
-                      href={selectedItem.trailer_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition"
-                    >
-                      <Play size={18} /> Trailer
-                    </a>
-                  )}
-                  <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                    <Bookmark size={18} /> Save
-                  </button>
-                </div>
-
-                {relatedItems.length > 0 && (
-                  <div>
-                    <h3 className="text-xl font-bold text-white mb-3">
-                      More like {selectedItem.title}
-                    </h3>
-                    <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
-                      {relatedItems.map((i) => (
-                        <div key={`${i.type}-${i.id}`} className="flex-shrink-0 snap-start">
-                          <Image
-                            src={i.poster_url || "/placeholder.png"}
-                            alt={i.title}
-                            width={120}
-                            height={180}
-                            className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
-                            onClick={() => openSuggestion(i)}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <button
-                className="absolute top-4 right-4 text-white text-2xl"
-                onClick={() => setSelectedItem(null)}
-              >
-                ✕
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Render overlays in portal (fallback to inline if portal not mounted yet) */}
+      {renderPortal(searchOverlay)}
+      {renderPortal(selectedOverlay)}
     </div>
   );
 }

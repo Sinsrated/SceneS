@@ -113,7 +113,7 @@ const MoviesPage = () => {
                 className="object-cover w-full h-55"
               />
               <div className="p-3">
-                <h3 className="text-white font-semibold truncate">{movie.title}</h3>
+                <h3 className="text-gray-500 font-semibold truncate">{movie.title}</h3>
                 <p className="text-sm text-gray-400">{movie.year}</p>
               </div>
             </motion.div>
