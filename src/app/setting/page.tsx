@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, Bell, Shield, LogIn, X, Plus } from "lucide-react";
+import {  Bell, Shield, LogIn, X,  Hexagon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "../lib/supabaseClient";
+
+import ProfilePage from "../profile/page";
+import ThemeToggle from "../components/ThemeToggle";
 
 type UserType = {
   id: string;
@@ -24,46 +26,11 @@ export default function Settings() {
   const [showAccounts, setShowAccounts] = useState(false);
 
   // ✅ Load user from localStorage first, fallback to Supabase
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      setAccounts([parsedUser]);
-      return;
-    }
-
+  
     // If no localStorage, fetch from Supabase
-    const fetchAccount = async () => {
-      if (!userId) return;
+   
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
-
-      if (error) {
-        console.error("Error fetching account:", error);
-        return;
-      }
-
-      if (data) {
-        setUser(data);
-        setAccounts([data]);
-        localStorage.setItem("user", JSON.stringify(data));
-      }
-    };
-
-    fetchAccount();
-  }, [userId]);
-
-  // ✅ Switch account in session
-  const handleSwitch = (acc: UserType) => {
-    setUser(acc);
-    localStorage.setItem("user", JSON.stringify(acc)); // Sync localStorage
-  };
-
+  
   // ✅ Logout
   const handleLogout = () => {
     setUser(null);
@@ -73,7 +40,7 @@ export default function Settings() {
   };
 
   return (
-    <section className="min-h-screen flex items-center justify-center bg-[url('/futuristic-bg.jpg')] bg-cover bg-center relative p-6">
+    <section className="min-h-screen flex items-center gap-3 justify-center bg-[url('/futuristic-bg.jpg')] bg-cover bg-center relative p-6">
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
@@ -89,78 +56,27 @@ export default function Settings() {
 
         <h1 className="text-4xl font-bold text-center mb-8">⚙️ Settings</h1>
 
-        {/* Active User */}
-        {user && (
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="flex flex-col gap-1 p-4 rounded-xl bg-white/10 border border-white/20 mb-6"
-          >
-            <h2 className="text-xl font-semibold">{user.username}</h2>
-            <p className="text-gray-300 text-sm">{user.email}</p>
-          </motion.div>
-        )}
-
-        {/* Manage Accounts */}
+      
         <motion.div
           whileHover={{ scale: 1.02 }}
-          className="p-4 rounded-xl bg-white/10 border border-white/20 mb-4"
+          className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/20 mb-4"
         >
-          <div
-            className="flex items-center justify-between cursor-pointer"
-            onClick={() => setShowAccounts(!showAccounts)}
-          >
-            <div className="flex items-center gap-3">
-              <User size={20} />
-              <span className="font-medium">Manage Accounts</span>
-            </div>
-            <span className="text-sm text-cyan-400">{showAccounts ? "x" : "+"}</span>
+          <div className="flex items-center gap-4"> 
+            <ProfilePage />
           </div>
-
-          {showAccounts && (
-            <div className="mt-4 space-y-3">
-              {accounts.length === 0 && (
-                <p className="text-gray-400 text-sm">No accounts logged in yet.</p>
-              )}
-
-              {accounts.map((acc) => (
-                <div
-                  key={acc.id}
-                  className={`flex items-center justify-between p-3 rounded-lg ${
-                    acc.email === user?.email
-                      ? "bg-cyan-500/30 border border-cyan-400/50"
-                      : "bg-white/5 border border-white/20"
-                  }`}
-                >
-                  <div>
-                    <p className="font-medium">{acc.username}</p>
-                    <p className="text-sm text-gray-300">{acc.email}</p>
-                  </div>
-                  {acc.email !== user?.email && (
-                    <button
-                      onClick={() => handleSwitch(acc)}
-                      className="text-sm text-red-400 hover:underline"
-                    >
-                      Switch
-                    </button>
-                  )}
-                </div>
-              ))}
-
-              {/* Add Account Button */}
-              <button
-                onClick={() => router.push("/login")}
-                className="w-full flex items-center justify-center gap-2 mt-3 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-gray-500 font-semibold shadow-lg"
-              >
-                <Plus size={18} /> Add 
-              </button>
-            </div>
-          )}
         </motion.div>
+
+     
+
+           
+              
+
+         
 
         {/* Notifications */}
         <motion.div
           whileHover={{ scale: 1.02 }}
-          className="flex items-center justify-between p-4 rounded-xl bg-white/10 border border-white/20 mb-4"
+          className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/20 mb-4"
         >
           <div className="flex items-center gap-3">
             <Bell size={20} />
@@ -176,7 +92,7 @@ export default function Settings() {
         {/* Privacy */}
         <motion.div
           whileHover={{ scale: 1.02 }}
-          className="flex items-center justify-between p-4 rounded-xl bg-white/10 border border-white/20"
+          className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/20"
         >
           <div className="flex items-center gap-3">
             <Shield size={20} />
@@ -185,12 +101,24 @@ export default function Settings() {
           <button className="text-sm text-red-400 hover:underline">Configure</button>
         </motion.div>
 
+         {/* Theme */}
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          className="flex items-center justify-between p-4  rounded-xl bg-white/5 border border-white/20"
+        >
+          <div className="flex items-center gap-4">
+            <Hexagon size={20} />
+            <span className="font-medium">Thems</span>
+          </div>
+          <ThemeToggle/>
+        </motion.div>
+
         {/* Logout */}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 mt-8 py-3 rounded-xl bg-gradient-to-r from-red-500 to-purple-600 text-gray-500 font-semibold shadow-lg"
+          className="w-full flex items-center justify-center gap-2 mt-8 py-3 rounded-xl bg-gradient-to-r from-[#0F6466] to-[#FFCB9A] text-gray-500 font-semibold shadow-lg"
         >
           <LogIn size={20} /> Log in
         </motion.button>

@@ -1,30 +1,24 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import ThemeToggle from "./components/ThemeToggle";
 
 export const metadata: Metadata = {
-  title: "Scenecs",
-  description: "Scenecs",
+  title: "My Movie App",
+  description: "Movie website with theme support",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-     
+    <html lang="en" suppressHydrationWarning>
+      <body className="antialiased">
+        {/* Floating Apple-style toggle in the top-right */}
+        {/* <div className="fixed top-2 left-22 z-50">
+          <ThemeToggle />
+        </div> */}
         <main>{children}</main>
       </body>
     </html>

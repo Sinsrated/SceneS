@@ -86,7 +86,7 @@ const Navbar = () => {
       </nav>
 
       {/* 📱 Mobile Top Bar */}
-      <header className="md:hidden fixed top-2 left-0 w-full flex items-center justify-between px-4 z-50">
+      <header className="md:hidden fixed top-2 left-0 gap-10 w-full flex items-center justify-between px-4 z-50">
         <div
           className="text-red-500 font-bold text-lg cursor-pointer"
           onClick={() => handleNav("/home")}

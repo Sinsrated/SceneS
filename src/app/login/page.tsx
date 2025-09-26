@@ -1,128 +1,103 @@
 "use client";
-import Link from "next/link";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { User, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
+import { motion } from "framer-motion";
+import { Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 
-export default function Login() {
+export default function LoginPage() {
   const router = useRouter();
-  const [emailOrUsername, setEmailOrUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (!emailOrUsername || !password) {
-      setError("Please enter both email/username and password.");
-      return;
+  const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError("");
+
+  try {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setError(error.message);
+    } else {
+      router.push("/profile"); // successful login
     }
-
-    setError("");
-    setLoading(true);
-
-    try {
-      // Check for email or username in profiles
-      const { data: user, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .or(`email.eq.${emailOrUsername},username.eq.${emailOrUsername}`)
-        .eq("password", password)
-        .single();
-
-      if (error || !user) {
-        setError("Invalid email/username or password.");
-        setLoading(false);
-        return;
-      }
-
-      // Store in localStorage
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          id: user.id,
-          username: user.username,
-          email: user.email,
-        })
-      );
-
-      router.replace("/setting");
-    } catch (err: unknown) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : "Login failed.");
-    } finally {
-      setLoading(false);
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      setError(err.message);
+    } else {
+      setError("Login failed");
     }
-  };
+  }
+};
+
 
   return (
-    <section className="min-h-screen flex items-center justify-center bg-[url('/futuristic-bg.jpg')] bg-cover bg-center relative">
-      <motion.div
-        initial={{ opacity: 0, y: 50 }}
+    <div className="min-h-screen flex items-center justify-center bg-[#2C3532]text-white">
+      <motion.form
+        onSubmit={handleLogin}
+        className="bg-white/10 backdrop-blur-md p-8 rounded-2xl shadow-xl w-full max-w-md space-y-6"
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="w-full max-w-md p-8 rounded-2xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-xl"
       >
-        <h1 className="text-3xl font-bold text-gray-300 text-center mb-6">
-          Welcome Back
-        </h1>
+        <h1 className="text-2xl font-bold text-center">Log In</h1>
 
-        {error && <p className="text-red-400 text-center mb-4">{error}</p>}
+        {error && <p className="text-red-400 text-sm">{error}</p>}
 
-        <div className="space-y-4">
-          {/* Email or Username */}
-          <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
-            <User className="text-gray-300 mr-3" size={20} />
-            <input
-              type="text"
-              placeholder="Email or Username"
-              value={emailOrUsername}
-              onChange={(e) => setEmailOrUsername(e.target.value)}
-              className="bg-transparent w-full outline-none text-gray-300 placeholder-gray-300"
-            />
-          </div>
-
-          {/* Password */}
-          <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
-            <Lock className="text-gray-300 mr-3" size={20} />
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="bg-transparent w-full outline-none text-gray-300 placeholder-gray-300"
-            />
-            <button
-              type="button"
-              className="ml-2 text-gray-300"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
-          </div>
-
-          {/* Login Button */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleLogin}
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-pink-500 to-purple-600 text-gray-300 py-3 rounded-xl font-semibold shadow-lg"
-          >
-            {loading ? "Logging in..." : "Login"} <ArrowRight size={20} />
-          </motion.button>
+        {/* Email */}
+        <div className="flex items-center bg-white/5 rounded-xl px-4 py-3">
+          <Mail size={18} className="text-gray-400 mr-3" />
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="bg-transparent outline-none flex-1"
+            required
+          />
         </div>
 
-        <p className="text-center text-gray-300 mt-6">
-          Don’t have an account?{" "}
-          <Link href="/create" className="text-red-400 hover:underline">
-            Create one
-          </Link>
+        {/* Password with toggle */}
+        <div className="flex items-center bg-white/5 rounded-xl px-4 py-3">
+          <Lock size={18} className="text-gray-400 mr-3" />
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="bg-transparent outline-none flex-1"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="ml-2 text-gray-400 hover:text-gray-200"
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+
+        {/* Submit */}
+        <button
+          type="submit"
+          className="w-full bg-[#D8B08C] hover:bg-[#FFCB9A] py-3 rounded-xl flex items-center justify-center gap-2 transition"
+        >
+          Log In <ArrowRight size={18} />
+        </button>
+
+        <p className="text-sm text-gray-400 text-center mt-2">
+          Don&apos;t have an account?{" "}
+          <a href="/create" className="text-[#0F6466] hover:underline">
+            Sign Up
+          </a>
         </p>
-      </motion.div>
-    </section>
+      </motion.form>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search as SearchIcon, ArrowLeft, Play, Bookmark } from "lucide-react";
+import { Search as SearchIcon, ArrowLeft, Play, Bookmark, ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabaseClient";
@@ -45,7 +45,7 @@ export default function SearchBar() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const isMountedRef = useRef(false);
   const portalRef = useRef<HTMLDivElement | null>(null);
-
+const relatedRef = useRef<HTMLDivElement | null>(null);
   const [isSmall, setIsSmall] = useState(false);
 
   // create portal root on mount
@@ -107,6 +107,17 @@ export default function SearchBar() {
       setLoading(false);
     }
   }, []);
+
+  const scrollRelated = (direction: "left" | "right") => {
+  if (!relatedRef.current) return;
+  const container = relatedRef.current;
+  const scrollAmount = container.offsetWidth / 2; // scroll half container width
+  if (direction === "left") {
+    container.scrollBy({ left: -scrollAmount, behavior: "smooth" });
+  } else {
+    container.scrollBy({ left: scrollAmount, behavior: "smooth" });
+  }
+};
 
   // open suggestion (loads series details if needed)
   const openSuggestion = useCallback(
@@ -358,11 +369,32 @@ export default function SearchBar() {
                 </button>
               </div>
 
-              {relatedItems.length > 0 && (
-                <div>
-                  <h3 className="text-xl font-bold text-white mb-3">More like {selectedItem.title}</h3>
-                  <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
-                    {relatedItems.map((i) => (
+              {/* More like this */}
+{relatedItems.length > 0 && (
+  <div className="relative mt-6">
+    <h3 className="text-xl font-bold text-white mb-3">
+      More like {selectedItem.title}
+    </h3>
+
+    {/* Scroll buttons for desktop */}
+    <button
+      onClick={() => scrollRelated("left")}
+      className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
+    >
+      <ChevronLeft size={28} />
+    </button>
+    <button
+      onClick={() => scrollRelated("right")}
+      className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
+    >
+      <ChevronRight size={28} />
+    </button>
+
+    {/* Scrollable container */}
+    <div
+      ref={relatedRef}
+      className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x"
+    > {relatedItems.map((i) => (
                       <div key={`${i.type}-${i.id}`} className="flex-shrink-0 snap-start">
                         <Image
                           src={i.poster_url || "/placeholder.png"}

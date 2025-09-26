@@ -1,196 +1,165 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
+import { motion } from "framer-motion";
+import { User, Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 
-export default function CreateAccount() {
+export default function SignUpPage() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [username, setUsername] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const validateEmail = (email: string) => {
-    // Must include @domain.com
-    const regex = /^[^\s@]+@(gmail\.com|icloud\.com)$/;
-    return regex.test(email);
-  };
-
-  const validatePassword = (password: string) => {
-    // Minimum 8 characters, at least one letter and one number
+  const validatePassword = (pass: string) => {
+    // must have 8+ chars, 1 letter, 1 number
     const regex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
-    return regex.test(password);
+    return regex.test(pass);
   };
 
-  const handleCreate = async () => {
-    const emailTrimmed = email.trim();
-
-    if (!username || !emailTrimmed || !password || !confirmPassword) {
-      setError("Please fill in all fields.");
-      return;
-    }
-
-    if (!validateEmail(emailTrimmed)) {
-      setError("Email must be in the format user@domain.com");
-      return;
-    }
-
-    if (!validatePassword(password)) {
-      setError(
-        "Password must be at least 8 characters and include at least one letter and one number."
-      );
-      return;
-    }
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
 
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
 
-    setError("");
-    setLoading(true);
-
-    try {
-      // Check for existing username or email
-      const { data: existingProfiles } = await supabase
-        .from("profiles")
-        .select("*")
-        .or(`username.eq.${username},email.eq.${emailTrimmed}`);
-
-      if (existingProfiles && existingProfiles.length > 0) {
-        setError("Username or email already exists.");
-        setLoading(false);
-        return;
-      }
-
-      // Insert new profile
-      const { data: insertedProfile, error: insertError } = await supabase
-        .from("profiles")
-        .insert([{ username, email: emailTrimmed, password }])
-        .select()
-        .single();
-
-      if (insertError || !insertedProfile) {
-        setError(insertError?.message || "Failed to create account.");
-        setLoading(false);
-        return;
-      }
-
-      // Store user in localStorage
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          id: insertedProfile.id,
-          username: insertedProfile.username,
-          email: insertedProfile.email,
-        })
+    if (!validatePassword(password)) {
+      setError(
+        "Password must be at least 8 characters long and include letters and numbers."
       );
+      return;
+    }
 
-      router.replace("/setting");
-    } catch (err: unknown) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : "Failed to create account.");
-    } finally {
-      setLoading(false);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { username }, // keep username
+      },
+    });
+
+    if (error) {
+      setError(error.message);
+      return;
+    }
+
+    // Immediately log in the user if session exists
+    if (data.session) {
+      router.push("/profile");
+    } else {
+      // If session is null, force login manually
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (loginError) {
+        setError(loginError.message);
+        return;
+      }
+
+      router.push("/profile"); // redirect after successful login
     }
   };
 
   return (
-    <section className="min-h-screen flex items-center justify-center bg-[url('/futuristic-bg.jpg')] bg-cover bg-center relative">
-      <motion.div
-        initial={{ opacity: 0, y: 50 }}
+    <div className="min-h-screen flex items-center justify-center bg-[#2C3532] text-white">
+      <motion.form
+        onSubmit={handleSignUp}
+        className="bg-white/10 backdrop-blur-md p-8 rounded-2xl shadow-xl w-full max-w-md space-y-6"
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="w-full max-w-md p-8 rounded-2xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-xl"
       >
-        <h1 className="text-3xl font-bold text-gray-300 text-center mb-6">
-          Create Account
-        </h1>
+        <h1 className="text-2xl font-bold text-center">Create Account</h1>
 
-        {error && <p className="text-red-400 text-center mb-4">{error}</p>}
+        {error && <p className="text-red-400 text-sm">{error}</p>}
 
-        <div className="space-y-4">
-          {/* Username */}
-          <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
-            <User className="text-gray-300 mr-3" size={20} />
-            <input
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="bg-transparent w-full outline-none text-gray-300 placeholder-gray-300"
-            />
-          </div>
-
-          {/* Email */}
-          <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
-            <Mail className="text-gray-300 mr-3" size={20} />
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="bg-transparent w-full outline-none text-gray-300 placeholder-gray-300"
-            />
-          </div>
-
-          {/* Password */}
-          <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
-            <Lock className="text-gray-300 mr-3" size={20} />
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="bg-transparent w-full outline-none text-gray-300 placeholder-gray-300"
-            />
-            <button
-              type="button"
-              className="ml-2 text-gray-300"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
-          </div>
-
-          {/* Confirm Password */}
-          <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 border border-white/20">
-            <Lock className="text-gray-300 mr-3" size={20} />
-            <input
-              type={showConfirm ? "text" : "password"}
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="bg-transparent w-full outline-none text-gray-300 placeholder-gray-300"
-            />
-            <button
-              type="button"
-              className="ml-2 text-gray-300"
-              onClick={() => setShowConfirm(!showConfirm)}
-            >
-              {showConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
-          </div>
-
-          {/* Create Account Button */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleCreate}
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3 rounded-xl font-semibold shadow-lg"
-          >
-            {loading ? "Creating..." : "Create Account"} <ArrowRight size={20} />
-          </motion.button>
+        {/* Username */}
+        <div className="flex items-center bg-white/5 rounded-xl px-4 py-3">
+          <User size={18} className="text-gray-400 mr-3" />
+          <input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="bg-transparent outline-none flex-1"
+            required
+          />
         </div>
-      </motion.div>
-    </section>
+
+        {/* Email */}
+        <div className="flex items-center bg-white/5 rounded-xl px-4 py-3">
+          <Mail size={18} className="text-gray-400 mr-3" />
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="bg-transparent outline-none flex-1"
+            required
+          />
+        </div>
+
+        {/* Password with toggle */}
+        <div className="flex items-center bg-white/5 rounded-xl px-4 py-3">
+          <Lock size={18} className="text-gray-400 mr-3" />
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Password (min 8, letters + numbers)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="bg-transparent outline-none flex-1"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="ml-2 text-gray-400 hover:text-gray-200"
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+
+        {/* Confirm Password with toggle */}
+        <div className="flex items-center bg-white/5 rounded-xl px-4 py-3">
+          <Lock size={18} className="text-gray-400 mr-3" />
+          <input
+            type={showConfirmPassword ? "text" : "password"}
+            placeholder="Confirm Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="bg-transparent outline-none flex-1"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="ml-2 text-gray-400 hover:text-gray-200"
+          >
+            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+
+        {/* Submit */}
+        <button className="w-full bg-[#D8B08C] hover:bg-[#FFCB9A] py-3 rounded-xl flex items-center justify-center gap-2 transition">
+          Sign Up <ArrowRight size={18} />
+        </button>
+
+        <p className="text-sm text-gray-400 text-center">
+          Already have an account?{" "}
+          <a href="/login" className="text-[#0F6466] hover:underline">
+            Log in
+          </a>
+        </p>
+      </motion.form>
+    </div>
   );
 }
