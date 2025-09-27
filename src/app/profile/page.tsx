@@ -16,7 +16,7 @@ interface SupabaseUser {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [user, setUser] = useState<unknown>(null); // ✅ replaced any with unknown
+  const [user, setUser] = useState<unknown>(null); 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

@@ -4,11 +4,13 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Download, ChevronLeft, ChevronRight, Bookmark } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
+import Description from "./description";
 
 interface Item {
   id: number;
   type: "movie" | "series";
   title: string;
+  vj: string;
   poster_url: string;
   backdrop_url: string;
   description: string;
@@ -55,6 +57,7 @@ const Trending = () => {
             poster_url: m.poster_url ?? "",
             backdrop_url: m.backdrop_url ?? "",
             year: m.year ?? "",
+            vj: m.vj ?? "unknown",
             description: m.description ?? "",
             watch_url: m.watch_url ?? undefined,
             trailer_url: m.trailer_url ?? undefined,
@@ -68,6 +71,7 @@ const Trending = () => {
             poster_url: s.poster_url ?? "",
             backdrop_url: s.backdrop_url ?? "",
             year: s.year ?? "",
+            vj: s.vj ?? "unknown",
             description: s.description ?? "",
             watch_url: s.watch_url ?? undefined,
             trailer_url: s.trailer_url ?? undefined,
@@ -174,6 +178,10 @@ const Trending = () => {
               height={260}
               className="object-cover h-55 w-35"
             />
+
+              <p className="absolute top-1 right-2 bg-black/40 text-white text-xs font-semibold px-2 py-1 rounded-lg">
+    {item.vj}
+  </p>
           </motion.div>
         ))}
   </div>
@@ -199,6 +207,9 @@ const Trending = () => {
                     <div className="flex flex-col justify-between flex-1">
                       <div>
                         <h2 className="text-3xl font-bold text-white mb-2">{selectedItem.title}</h2>
+                         <p className="text-sm text-gray-300 mb-2">
+                         {selectedItem.vj}, {selectedItem.year} • {selectedItem.genre.join(", ")}
+                        </p>
                         {selectedItem.watch_url && (
                           <button
                             onClick={() => window.open(selectedItem.watch_url, "_blank")}
@@ -207,10 +218,8 @@ const Trending = () => {
                             <Play size={18} /> Watch
                           </button>
                         )}
-                        <p className="text-gray-300 mb-4">{selectedItem.description}</p>
-                        <p className="text-sm text-gray-300 mb-2">
-                          {selectedItem.year} • {selectedItem.genre.join(", ")}
-                        </p>
+                        
+                       
                       </div>
       
                       <div className="flex gap-4 mb-6">
@@ -227,6 +236,9 @@ const Trending = () => {
                         <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
                           <Bookmark size={18} /> Save
                         </button>
+                      </div>
+                      <div className="flex-1 justify-between">
+                        <Description text={selectedItem.description} limit={180} />
                       </div>
       
 {/* More like this */}
@@ -266,6 +278,7 @@ const Trending = () => {
             onClick={() => setSelectedItem(i)}
           />
         </div>
+        
       ))}
     </div>
   </div>

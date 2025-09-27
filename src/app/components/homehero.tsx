@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Play, Bookmark } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { create } from "domain";
+import Description from "./description";  
 
 interface Item {
   id: number;
@@ -22,6 +23,7 @@ interface Item {
   episodes?: number;
   seasons?: number;
   created_at: number;
+  vj?: string;
 }
 
 // Define Supabase row types
@@ -37,6 +39,7 @@ interface MovieRow {
   rating?: number;
   genre: string[];
   created_at: number;
+  vj?: string;
 }
 
 interface SeriesRow extends MovieRow {
@@ -82,6 +85,7 @@ useEffect(() => {
           poster_url: m.poster_url ?? "",
           backdrop_url: m.backdrop_url ?? "",
           year: m.year ?? "",
+          vj: m.vj ?? "",
           description: m.description ?? "",
           watch_url: m.watch_url ?? undefined,
           trailer_url: m.trailer_url ?? undefined,
@@ -96,6 +100,7 @@ useEffect(() => {
           poster_url: s.poster_url ?? "",
           backdrop_url: s.backdrop_url ?? "",
           year: s.year ?? "",
+          vj: s.vj ?? "",
           description: s.description ?? "",
           watch_url: s.watch_url ?? undefined,
           trailer_url: s.trailer_url ?? undefined,
@@ -220,11 +225,15 @@ useEffect(() => {
                   height={150}
                   className="object-cover h-44 w-32"
                 />
+     
                 <div className="p-2 flex flex-col">
-                  <h3 className="text-lg font-semibold text-white">{i.title}</h3>
+                  <h3 className="text-lg font-semibold text-white line-clamp-1">{i.title}</h3>
                   <p className="text-xs text-gray-300 mt-1 line-clamp-2">{i.description}</p>
-                  <p className="text-[10px] text-gray-400 mt-1">{i.year}</p>
+                  <p className="text-[10px] text-gray-400 mt-1">{i.year} </p>
+                  <p className="text-[10px]   text-white text-xs font-semibold px-2 py-1 rounded-lg">{i.vj}</p>
                 </div>
+   
+                
               </div>
             </div>
           </motion.div>
@@ -253,8 +262,11 @@ useEffect(() => {
                   <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/80 rounded-2xl" />
                 </>
               )}
-              <div className="absolute bottom-6 left-6 z-10 text-white max-w-[70%]">
-                <h3 className="text-2xl font-bold">{i.title}</h3>
+              <div className="absolute bottom-6 left-10 z-10 text-white max-w-[70%]">
+                
+                <h3 className="text-2xl font-bold">{i.title}
+                  < span className="text-sm text-gray-300 m1-2"> {i.vj}</span></h3>
+                <h4 className="text-sm text-gray-300 mb-4">{i.year} • {i.genre.join(", ")}</h4>
                 <p className="text-sm text-gray-200 line-clamp-3">{i.description}</p>
               </div>
             </div>
@@ -308,6 +320,9 @@ useEffect(() => {
               <div className="flex flex-col justify-between flex-1">
                 <div>
                   <h2 className="text-3xl font-bold text-white mb-2">{selectedItem.title}</h2>
+                   <p className="text-sm text-gray-300 mb-2">
+                         {selectedItem.vj}, {selectedItem.year} • {selectedItem.genre.join(", ")}
+                        </p>
                   {selectedItem.watch_url && (
                     <button
                       onClick={() => window.open(selectedItem.watch_url, "_blank")}
@@ -316,10 +331,7 @@ useEffect(() => {
                       <Play size={18} /> Watch
                     </button>
                   )}
-                  <p className="text-gray-300 mb-4">{selectedItem.description}</p>
-                  <p className="text-sm text-gray-300 mb-2">
-                    {selectedItem.year} • {selectedItem.genre.join(", ")}
-                  </p>
+                 
                 </div>
 
                 <div className="flex gap-4 mb-6">
@@ -337,6 +349,9 @@ useEffect(() => {
                     <Bookmark size={18} /> Save
                   </button>
                 </div>
+                 <div className="flex-1 justify-between">
+                                        <Description text={selectedItem.description} limit={180} />
+                                      </div>
 
                 {/* More like this */}
                 {relatedItems.length > 0 && (
@@ -353,6 +368,7 @@ useEffect(() => {
                             className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
                             onClick={() => setSelectedItem(i)}
                           />
+  
                         </div>
                       ))}
                     </div>

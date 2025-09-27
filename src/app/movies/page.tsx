@@ -6,6 +6,7 @@ import { Play, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import Header from "../components/Header";
 import { supabase } from "../lib/supabaseClient";
 import VideoModal from "../components/videoplayer";
+import Description from "../components/description";
 
 interface Movie {
   id: number;
@@ -19,6 +20,7 @@ interface Movie {
   trailer_url?: string;
   watch_url?: string; 
   created_at: string;
+  vj?: string;
 }
 
 const MoviesPage = () => {
@@ -75,7 +77,7 @@ const MoviesPage = () => {
       <section className="w-full py-20 px-4 md:px-12">
         {/* Skeleton */}
         {loading && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 x2:grid-cols-12 gap-6">
             {Array.from({ length: 10 }).map((_, i) => (
               <div
                 key={i}
@@ -97,7 +99,7 @@ const MoviesPage = () => {
         )}
 
         {/* Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 x2:grid-cols-12 gap-6">
           {movies.map((movie) => (
             <motion.div
               key={movie.id}
@@ -112,6 +114,9 @@ const MoviesPage = () => {
                 height={450}
                 className="object-cover w-full h-55"
               />
+                                      <p className="absolute top-1 right-2 bg-black/40 text-white text-xs font-semibold px-2 py-1 rounded-lg">
+    {movie.vj}
+  </p>
               <div className="p-3">
                 <h3 className="text-gray-500 font-semibold truncate">{movie.title}</h3>
                 <p className="text-sm text-gray-400">{movie.year}</p>
@@ -142,10 +147,8 @@ const MoviesPage = () => {
                     <h2 className="text-3xl font-bold text-white mb-2">
                       {selectedMovie.title}
                     </h2>
-                    <p className="text-gray-300 mb-4">
-                      {selectedMovie.description}
-                    </p>
-                    <p className="text-sm opacity-70">{selectedMovie.year}</p>
+                  
+                    <p className="text-sm opacity-70">{selectedMovie.vj}, {selectedMovie.year}</p>
                     <p className="text-cyan-400 font-semibold">
                       ⭐ {selectedMovie.rating}
                     </p>
@@ -173,6 +176,9 @@ const MoviesPage = () => {
 
                     
                   </div>
+                     <div className="flex-1 justify-between">
+                                                            <Description text={selectedMovie.description} limit={180} />
+                                                          </div>
 
                   {/* Related */}
                   {relatedMovies.length > 0 && (

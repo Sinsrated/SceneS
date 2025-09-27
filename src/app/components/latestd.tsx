@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Play, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import Header from "../components/Header";
 import { supabase } from "../lib/supabaseClient";
+import Description from "./description";
 
 interface Serie {
   id: number;
@@ -19,6 +20,8 @@ interface Serie {
   seasons?: number;
   genre: string[];
   type?: string;
+  vj?: string;
+  created_at: string;
 }
 
 const LatestDrama = () => {
@@ -126,6 +129,9 @@ const LatestDrama = () => {
                     height={260}
                     className="object-cover h-55 w-35"
                   />
+                  <p className="absolute top-1 right-2 bg-black/40 text-white text-xs font-semibold px-2 py-1 rounded-lg">
+    {s.vj}
+  </p>
                 </motion.div>
               ))}
         </div>
@@ -151,10 +157,8 @@ const LatestDrama = () => {
                     <h2 className="text-3xl font-bold text-white mb-2">
                       {selectedSerie.title}
                     </h2>
-                    <p className="text-gray-300 mb-4">
-                      {selectedSerie.description}
-                    </p>
-                    <p className="text-sm opacity-70">{selectedSerie.year}</p>
+                   
+                    <p className="text-sm opacity-70">{selectedSerie.vj}, {selectedSerie.year}</p>
                     <p className="text-cyan-400 font-semibold">
                       ⭐ {selectedSerie.rating}
                     </p>
@@ -186,6 +190,9 @@ const LatestDrama = () => {
                       </a>
                     )}
                   </div>
+                  <div className="flex-1 justify-between">
+                                          <Description text={selectedSerie.description} limit={180} />
+                                        </div>
 
                   {/* More like this */}
                   {relatedSeries.length > 0 && (

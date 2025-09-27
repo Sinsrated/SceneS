@@ -5,6 +5,7 @@ import { Search as SearchIcon, ArrowLeft, Play, Bookmark, ChevronLeft, ChevronRi
 import Image from "next/image";
 import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabaseClient";
+import Description from "./description";
 
 export interface Item {
   id: number;
@@ -18,12 +19,14 @@ export interface Item {
   episode?: number;
   seasons?: number;
   type: "movie" | "series";
+  vj?: string;
 }
 
 interface Season {
   id: number;
   season_number: number;
   episodes: Episode[];
+  vj?: string;
 }
 
 interface Episode {
@@ -31,6 +34,7 @@ interface Episode {
   title: string;
   episode_number: number;
   watch_url?: string;
+  vj?: string;
 }
 
 export default function SearchBar() {
@@ -45,7 +49,7 @@ export default function SearchBar() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const isMountedRef = useRef(false);
   const portalRef = useRef<HTMLDivElement | null>(null);
-const relatedRef = useRef<HTMLDivElement | null>(null);
+  const relatedRef = useRef<HTMLDivElement | null>(null);
   const [isSmall, setIsSmall] = useState(false);
 
   // create portal root on mount
@@ -78,6 +82,7 @@ const relatedRef = useRef<HTMLDivElement | null>(null);
     poster_url: String(row.poster_url ?? "/placeholder.png"),
     description: String(row.description ?? "No description available"),
     year: row.year ? String(row.year) : undefined,
+    vj: row.vj ? String(row.vj) : undefined,
     genre: Array.isArray(row.genre) ? (row.genre as string[]) : [],
     watch_url: row.watch_url ? String(row.watch_url) : undefined,
     trailer_url: row.trailer_url ? String(row.trailer_url) : undefined,
@@ -280,8 +285,9 @@ const relatedRef = useRef<HTMLDivElement | null>(null);
                     onClick={() => openSuggestion(r)}
                     className="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-white/5 transition"
                   >
-                    <span className="text-white">{r.title}</span>
+                    <span className="text-white">{r.title},   {r.vj}</span>
                     <span className="text-xs text-red-400 uppercase">{r.type}</span>
+                    
                   </button>
                 ))}
               </div>
@@ -312,7 +318,13 @@ const relatedRef = useRef<HTMLDivElement | null>(null);
             />
             <div className="flex flex-col justify-between flex-1">
               <div>
-                <h2 className="text-3xl font-bold text-white mb-2">{selectedItem.title}</h2>
+                <h2 className="text-1x3 font-bold text-white mb-2">{selectedItem.title}
+                 <span className="text-sm text-gray-400 ml-2"> {selectedItem.vj}</span>
+                </h2>
+                 <p className="text-sm text-gray-300 mb-2">
+                  {selectedItem.year} • {selectedItem.genre?.join(", ")}
+                </p>
+              </div>
                 {selectedItem.watch_url && (
                   <button
                     onClick={() => window.open(selectedItem.watch_url, "_blank")}
@@ -321,11 +333,8 @@ const relatedRef = useRef<HTMLDivElement | null>(null);
                     <Play size={18} /> Watch
                   </button>
                 )}
-                <p className="text-gray-300 mb-4">{selectedItem.description}</p>
-                <p className="text-sm text-gray-300 mb-2">
-                  {selectedItem.year} • {selectedItem.genre?.join(", ")}
-                </p>
-              </div>
+
+               
 
               {selectedItem.type === "series" && seriesDetails.length > 0 && (
                 <div className="mt-6">
@@ -368,6 +377,9 @@ const relatedRef = useRef<HTMLDivElement | null>(null);
                   <Bookmark size={18} /> Save
                 </button>
               </div>
+               <div className="flex-1 justify-between">
+                                      <Description text={selectedItem.description} limit={180} />
+                                    </div>
 
               {/* More like this */}
 {relatedItems.length > 0 && (

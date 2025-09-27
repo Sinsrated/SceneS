@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Play, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import Header from "../components/Header";
 import { supabase } from "../lib/supabaseClient";
+import Description from "../components/description";
 
 // Type for series
 interface Series {
@@ -20,6 +21,7 @@ interface Series {
   genre: string[];
   trailer_url?: string;
   created_at: string;
+  vj?: string;
 }
 
 const SeriesPage = () => {
@@ -75,7 +77,7 @@ const SeriesPage = () => {
       <section className="w-full py-20 px-4 md:px-12">
         {/* Skeleton state */}
         {loading && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 x2:grid-cols-12 gap-6">
             {Array.from({ length: 10 }).map((_, i) => (
               <div
                 key={i}
@@ -97,7 +99,7 @@ const SeriesPage = () => {
         )}
 
         {/* Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 x2:grid-cols-12 gap-6">
           {seriesList.map((s) => (
             <motion.div
               key={s.id}
@@ -112,10 +114,12 @@ const SeriesPage = () => {
                 height={450}
                 className="object-cover w-full h-55"
               />
-              <div className="p-3">
+                           <p className="absolute top-1 right-2 bg-black/40 text-white text-xs font-semibold px-2 py-1 rounded-lg">
+    {s.vj}
+  </p>
+  <div className="p-3">
                 <h3 className="text-gray-500 font-semibold truncate">{s.title}</h3>
                 <p className="text-sm text-gray-400">{s.year}</p>
-                
               </div>
             </motion.div>
           ))}
@@ -143,9 +147,7 @@ const SeriesPage = () => {
                     <h2 className="text-3xl font-bold text-white mb-2">
                       {selectedSeries.title}
                     </h2>
-                    <p className="text-gray-300 mb-4">
-                      {selectedSeries.description}
-                    </p>
+                    
                     <p className="text-sm opacity-70">{selectedSeries.year}</p>
                     <p className="text-cyan-400 font-semibold">
                       ⭐ {selectedSeries.rating}
@@ -182,6 +184,9 @@ const SeriesPage = () => {
                       </a>
                     )}
                   </div>
+                   <div className="flex-1 justify-between">
+                                          <Description text={selectedSeries.description} limit={180} />
+                                        </div>
 
                   {/* Related series */}
                   {relatedSeries.length > 0 && (
