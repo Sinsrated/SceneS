@@ -43,7 +43,7 @@ const Navbar = () => {
           className="text-red-500 font-bold text-xl cursor-pointer"
           onClick={() => handleNav("/home")}
         >
-          ScenecS
+         KYOGOOBE
         </div>
 
         {/* Links */}

@@ -48,7 +48,7 @@ export default function Settings() {
         className="w-full max-w-2xl p-8 rounded-2xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-xl text-gray relative"
       >
         <button
-          onClick={() => router.replace("/home")}
+          onClick={() => router.back()}
           className="absolute top-3 right-3 p-2 rounded-xl hover:bg-white/10"
         >
           <X size={18} />

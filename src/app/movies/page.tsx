@@ -144,7 +144,7 @@ const MoviesPage = () => {
                 />
                 <div className="flex flex-col justify-between flex-1">
                   <div>
-                    <h2 className="text-3xl font-bold text-white mb-2">
+                    <h2 className="text-1x3 font-bold text-white mb-2">
                       {selectedMovie.title}
                       <span className="text-sm text-gray-400 ml-2">{selectedMovie.vj}</span>
                     </h2>
