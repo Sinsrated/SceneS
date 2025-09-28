@@ -319,9 +319,11 @@ useEffect(() => {
               />
               <div className="flex flex-col justify-between flex-1">
                 <div>
-                  <h2 className="text-3xl font-bold text-white mb-2">{selectedItem.title}</h2>
+                  <h2 className="text-3xl font-bold text-white mb-2">{selectedItem.title}
+                    <span className="text-sm text-gray-400 ml-2">{selectedItem.vj}</span>
+                  </h2>
                    <p className="text-sm text-gray-300 mb-2">
-                         {selectedItem.vj}, {selectedItem.year} • {selectedItem.genre.join(", ")}
+                         {selectedItem.year} • {selectedItem.genre.join(", ")}
                         </p>
                   {selectedItem.watch_url && (
                     <button
