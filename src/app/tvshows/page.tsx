@@ -7,8 +7,26 @@ import Header from "../components/Header";
 import { supabase } from "../lib/supabaseClient";
 import Description from "../components/description";
 
-// Type for series
-interface Series {
+interface Episode {
+  id: number;
+  title: string;
+  overview?: string;
+  episode_number: number;
+  runtime?: string;
+  still_path?: string;
+}
+
+interface Season {
+  name: string;
+  overview?: string;
+  created_at?: string;
+  poster_path?: string;
+  episode_count: number;
+  season_number: number;
+  episodes?: Episode[];
+}
+// Type for tvshows
+interface Tvshows {
   id: number;
   title: string;
   poster_url: string;
@@ -24,24 +42,26 @@ interface Series {
   vj?: string;
 }
 
-const SeriesPage = () => {
-  const [seriesList, setSeriesList] = useState<Series[]>([]);
-  const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
+const TvshowsPage = () => {
+  const [tvshowsList, setTvshowsList] = useState<Tvshows[]>([]);
+  const [selectedTvshow, setSelectedTvshow] = useState<Tvshows | null>(null);
   const [loading, setLoading] = useState(true);
   const relatedRef = useRef<HTMLDivElement>(null);
+  const [expandedSeason, setExpandedSeason] = useState<number | null>(null);
+  const [episodes, setEpisodes] = useState<Episode[] | null>(null);
 
-  // ✅ Fetch only series
+  // ✅ Fetch only tvshows
   useEffect(() => {
-    const fetchSeries = async () => {
+    const fetchTvshows = async () => {
       try {
         const { data, error } = await supabase
-          .from("series")
+          .from("tvshows")
           .select("*")
           .order("created_at", { ascending: false });
 
-        if (error) console.error("Error fetching series:", error.message);
+        if (error) console.error("Error fetching tvshows:", error.message);
 
-        setSeriesList(data || []);
+        setTvshowsList(data || []);
       } catch (err) {
         console.error("Unexpected fetch error:", err);
       } finally {
@@ -49,7 +69,7 @@ const SeriesPage = () => {
       }
     };
 
-    fetchSeries();
+    fetchTvshows();
   }, []);
 
   const scrollRelated = (direction: "left" | "right") => {
@@ -62,12 +82,12 @@ const SeriesPage = () => {
     }
   };
 
-  // ✅ Related series (same genre, exclude current one)
-  const relatedSeries = selectedSeries
-    ? seriesList.filter(
-        (s) =>
-          s.id !== selectedSeries.id &&
-          s.genre?.some((g) => selectedSeries.genre?.includes(g))
+  // ✅ Related tvshows (same genre, exclude current one)
+  const relatedTvshows = selectedTvshow
+    ? tvshowsList.filter(
+        (t) =>
+          t.id !== selectedTvshow.id &&
+          t.genre?.some((g) => selectedTvshow.genre?.includes(g))
       )
     : [];
 
@@ -94,32 +114,36 @@ const SeriesPage = () => {
         )}
 
         {/* Empty state */}
-        {!loading && seriesList.length === 0 && (
-          <p className="text-gray-400 text-center">No series found.</p>
+        {!loading && tvshowsList.length === 0 && (
+          <p className="text-gray-400 text-center">No tvshows found.</p>
         )}
 
         {/* Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 x2:grid-cols-12 gap-6">
-          {seriesList.map((s) => (
+          {tvshowsList.map((t) => (
             <motion.div
-              key={s.id}
+              key={t.id}
               whileHover={{ scale: 1.05 }}
               className="bg-white/10 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden cursor-pointer hover:shadow-cyan-500/20 transition"
-              onClick={() => setSelectedSeries(s)}
+              onClick={() => setSelectedTvshow(t)}
             >
-              <Image
-                src={s.poster_url}
-                alt={s.title}
-                width={300}
-                height={450}
-                className="object-cover w-full h-55"
-              />
-                           <p className="absolute top-1 right-2 bg-black/40 text-white text-xs font-semibold px-2 py-1 rounded-lg">
-    {s.vj}
-  </p>
-  <div className="p-3">
-                <h3 className="text-gray-500 font-semibold truncate">{s.title}</h3>
-                <p className="text-sm text-gray-400">{s.year}</p>
+              <div className="relative">
+                <Image
+                  src={t.poster_url}
+                  alt={t.title}
+                  width={300}
+                  height={450}
+                  className="object-cover w-full h-55"
+                />
+                {t.vj && (
+                  <p className="absolute top-1 right-2 bg-black/40 text-white text-xs font-semibold px-2 py-1 rounded-lg">
+                    {t.vj}
+                  </p>
+                )}
+              </div>
+              <div className="p-3">
+                <h3 className="text-gray-500 font-semibold truncate">{t.title}</h3>
+                <p className="text-sm text-gray-400">{t.year}</p>
               </div>
             </motion.div>
           ))}
@@ -127,7 +151,7 @@ const SeriesPage = () => {
 
         {/* Expanded modal */}
         <AnimatePresence>
-          {selectedSeries && (
+          {selectedTvshow && (
             <motion.div
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
@@ -136,8 +160,8 @@ const SeriesPage = () => {
             >
               <div className="bg-white/10 rounded-2xl shadow-2xl max-w-5xl w-full mx-auto p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10">
                 <Image
-                  src={selectedSeries.poster_url}
-                  alt={selectedSeries.title}
+                  src={selectedTvshow.poster_url}
+                  alt={selectedTvshow.title}
                   width={300}
                   height={450}
                   className="rounded-xl object-cover"
@@ -145,24 +169,100 @@ const SeriesPage = () => {
                 <div className="flex flex-col justify-between flex-1">
                   <div>
                     <h2 className="text-1x3 font-bold text-white mb-2">
-                      {selectedSeries.title}
-                      <span className="text-sm text-gray-400 ml-2">{selectedSeries.vj}</span>
+                      {selectedTvshow.title}
+                      {selectedTvshow.vj && (
+                        <span className="text-sm text-gray-400 ml-2">
+                          {selectedTvshow.vj}
+                        </span>
+                      )}
                     </h2>
-                    
-                    <p className="text-sm opacity-70">{selectedSeries.year}</p>
+
+                    <p className="text-sm opacity-70">{selectedTvshow.year}</p>
                     <p className="text-cyan-400 font-semibold">
-                      ⭐ {selectedSeries.rating}
+                      ⭐ {selectedTvshow.rating}
                     </p>
-                    {selectedSeries.episode && (
-                      <p className="text-sm opacity-70">
-                        Episodes: {selectedSeries.episode}
+                   {/* Episodes */}
+{selectedTvshow.episode && (
+  <p className="text-sm opacity-70">
+    Episodes: {selectedTvshow.episode}
+  </p>
+)}
+
+{/* Seasons */}
+{Array.isArray(selectedTvshow.seasons) && selectedTvshow.seasons.length > 0 && (
+  <div className="mt-2 space-y-2">
+    <p className="text-sm opacity-70 font-semibold">
+      Seasons: {selectedTvshow.seasons.length}
+    </p>
+
+    <div className="space-y-2">
+      {selectedTvshow.seasons.map((season, i) => (
+        <div key={i} className="bg-white/5 rounded-lg p-2">
+          {/* Season header */}
+          <div
+            className="flex items-center gap-3 cursor-pointer hover:bg-white/10 rounded-lg p-2"
+            onClick={() =>
+              setExpandedSeason(expandedSeason === i ? null : i)
+            }
+          >
+            {season.poster_path && (
+              <Image
+                src={season.poster_path}
+                alt={season.name}
+                width={60}
+                height={90}
+                className="rounded-lg object-cover"
+              />
+            )}
+            <div className="flex-1">
+              <p className="text-white font-semibold">{season.name}</p>
+              <p className="text-xs text-gray-400">
+                {season.episode_count} episodes
+              </p>
+            </div>
+            <span className="text-gray-400">
+              {expandedSeason === i ? "−" : "+"}
+            </span>
+          </div>
+
+          {/* Episodes list (expandable) */}
+          {expandedSeason === i && episodes && (
+            <div className="pl-4 mt-2 space-y-2">
+              {episodes.map((ep) => (
+                <div
+                  key={ep.id}
+                  className="bg-black/30 rounded-lg p-2 flex items-start gap-3"
+                >
+                  {ep.still_path && (
+                    <Image
+                      src={ep.still_path}
+                      alt={ep.title}
+                      width={100}
+                      height={60}
+                      className="rounded-md object-cover"
+                    />
+                  )}
+                  <div>
+                    <p className="text-white font-medium">
+                      Ep {ep.episode_number}: {ep.title}
+                    </p>
+                    {ep.overview && (
+                      <p className="text-xs text-gray-400 line-clamp-2">
+                        {ep.overview}
                       </p>
                     )}
-                    {selectedSeries.seasons && (
-                      <p className="text-sm opacity-70">
-                        Seasons: {selectedSeries.seasons}
-                      </p>
-                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+
                   </div>
 
                   {/* Buttons */}
@@ -174,9 +274,9 @@ const SeriesPage = () => {
                       <Download size={18} />
                       Download
                     </button>
-                    {selectedSeries.trailer_url && (
+                    {selectedTvshow.trailer_url && (
                       <a
-                        href={selectedSeries.trailer_url}
+                        href={selectedTvshow.trailer_url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition"
@@ -185,15 +285,16 @@ const SeriesPage = () => {
                       </a>
                     )}
                   </div>
-                   <div className="flex-1 justify-between">
-                                          <Description text={selectedSeries.description} limit={180} />
-                                        </div>
 
-                  {/* Related series */}
-                  {relatedSeries.length > 0 && (
+                  <div className="flex-1 justify-between">
+                    <Description text={selectedTvshow.description} limit={180} />
+                  </div>
+
+                  {/* Related tvshows */}
+                  {relatedTvshows.length > 0 && (
                     <div className="relative mt-4">
                       <h3 className="text-xl font-bold text-white mb-3">
-                        More like {selectedSeries.title}
+                        More like {selectedTvshow.title}
                       </h3>
 
                       <button
@@ -213,7 +314,7 @@ const SeriesPage = () => {
                         ref={relatedRef}
                         className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x"
                       >
-                        {relatedSeries.map((r) => (
+                        {relatedTvshows.map((r) => (
                           <div key={r.id} className="flex-shrink-0 snap-start">
                             <Image
                               src={r.poster_url}
@@ -221,7 +322,7 @@ const SeriesPage = () => {
                               width={120}
                               height={180}
                               className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
-                              onClick={() => setSelectedSeries(r)}
+                              onClick={() => setSelectedTvshow(r)}
                             />
                           </div>
                         ))}
@@ -231,7 +332,7 @@ const SeriesPage = () => {
                 </div>
                 <button
                   className="absolute top-4 right-4 text-white text-2xl"
-                  onClick={() => setSelectedSeries(null)}
+                  onClick={() => setSelectedTvshow(null)}
                 >
                   ✕
                 </button>
@@ -244,4 +345,4 @@ const SeriesPage = () => {
   );
 };
 
-export default SeriesPage;
+export default TvshowsPage;
