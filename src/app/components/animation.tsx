@@ -39,7 +39,7 @@ const Animation = () => {
         const { data, error } = await supabase
           .from("movies")
           .select("*")
-          .eq("type", "animation")
+          .eq("type", "Animation")
           .order("created_at", { ascending: false });
 
         if (error) console.error(error.message);

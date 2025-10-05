@@ -7,23 +7,26 @@ import { Play, Bookmark } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { create } from "domain";
 import Description from "./description";  
+import { release } from "os";
+import { stat } from "fs";
 
 interface Item {
   id: number;
-  type: "movie" | "series";
+  type: "movie" | "tvshows";
   title: string;
   poster_url: string;
   backdrop_url: string;
-  year: string;
-  description: string;
+  release_date: string;
+  overview: string;
   watch_url?: string;
   trailer_url?: string;
   rating?: number;
-  genre: string[];
+  genres: string[];
   episodes?: number;
   seasons?: number;
   created_at: number;
   vj?: string;
+  status?: string;
 }
 
 // Define Supabase row types
@@ -32,17 +35,17 @@ interface MovieRow {
   title: string;
   poster_url: string;
   backdrop_url: string;
-  year: string;
-  description: string;
+  realease_date: string;
+  overview: string;
   watch_url?: string;
   trailer_url?: string;
   rating?: number;
-  genre: string[];
+  genres: string[];
   created_at: number;
   vj?: string;
 }
 
-interface SeriesRow extends MovieRow {
+interface TvshowRow extends MovieRow {
   episodes?: number;
   seasons?: number;
 }
@@ -69,12 +72,12 @@ useEffect(() => {
       if (movieErr) console.error("Movies fetch error:", movieErr.message);
 
       const { data: seriesData, error: seriesErr } = await supabase
-        .from("series")
+        .from("tvshows")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(10);
 
-      if (seriesErr) console.error("Series fetch error:", seriesErr.message);
+      if (seriesErr) console.error("Tvshows fetch error:", seriesErr.message);
 
       // Merge movies + series into ONE array
       const combined: Item[] = [
@@ -84,28 +87,29 @@ useEffect(() => {
           title: m.title ?? "Untitled",
           poster_url: m.poster_url ?? "",
           backdrop_url: m.backdrop_url ?? "",
-          year: m.year ?? "",
+          release_date: m.release_date ?? "",
           vj: m.vj ?? "",
-          description: m.description ?? "",
+          overview: m.overview ?? "",
           watch_url: m.watch_url ?? undefined,
           trailer_url: m.trailer_url ?? undefined,
           rating: m.rating ?? undefined,
-          genre: m.genre ?? [],
+          genres: m.genre ?? [],
           created_at: new Date(m.created_at).getTime(), // ✅ convert to timestamp
         })) ?? []),
         ...(seriesData?.map((s) => ({
           id: s.id ?? 0,
-          type: "series" as const,
+          type: "tvshows" as const,
           title: s.title ?? "Untitled",
           poster_url: s.poster_url ?? "",
           backdrop_url: s.backdrop_url ?? "",
-          year: s.year ?? "",
+          release_date: s.release_date ?? "",
           vj: s.vj ?? "",
-          description: s.description ?? "",
+          overview: s.overview ?? "",
           watch_url: s.watch_url ?? undefined,
           trailer_url: s.trailer_url ?? undefined,
           rating: s.rating ?? undefined,
-          genre: s.genre ?? [],
+          genres: s.genre ?? [],
+          status: s.status ?? "",
           episodes: s.episodes ?? undefined,
           seasons: s.seasons ?? undefined,
           created_at: new Date(s.created_at).getTime(), // ✅ convert to timestamp
@@ -135,7 +139,7 @@ useEffect(() => {
         (i) =>
           i.id !== selectedItem.id &&
           i.type === selectedItem.type &&
-          i.genre.some((g) => selectedItem.genre.includes(g))
+          i.genres.some((g) => selectedItem.genres.includes(g))
       )
     : [];
 
@@ -228,8 +232,8 @@ useEffect(() => {
      
                 <div className="p-2 flex flex-col">
                   <h3 className="text-lg font-semibold text-white line-clamp-1">{i.title}</h3>
-                  <p className="text-xs text-gray-300 mt-1 line-clamp-2">{i.description}</p>
-                  <p className="text-[10px] text-gray-400 mt-1">{i.year} </p>
+                  <p className="text-xs text-gray-300 mt-1 line-clamp-2">{i.overview}</p>
+                  <p className="text-[10px] text-gray-400 mt-1">{i.release_date} </p>
                   <p className="text-[10px]   text-white text-xs font-semibold px-2 py-1 rounded-lg">{i.vj}</p>
                 </div>
    
@@ -252,7 +256,7 @@ useEffect(() => {
             className="flex-shrink-0 snap-center w-full cursor-pointer hover:scale-105 transition"
             onClick={() => setSelectedItem(i)}
           >
-            <div className="relative w-full h-[75vh] overflow-hidden rounded-2xl">
+            <div className="relative w-full h-[90vh] overflow-hidden rounded-2xl">
               {i.backdrop_url && (
                 <>
                   <div
@@ -266,8 +270,9 @@ useEffect(() => {
                 
                 <h3 className="text-2xl font-bold">{i.title}
                   < span className="text-sm text-gray-300 m1-2"> {i.vj}</span></h3>
-                <h4 className="text-sm text-gray-300 mb-4">{i.year} • {i.genre.join(", ")}</h4>
-                <p className="text-sm text-gray-200 line-clamp-3">{i.description}</p>
+                <h4 className="text-sm text-gray-300 mb-4">{i.release_date} • {i.genres.join(", ")}
+                <span className="text-sm text-gray-400 ml-2">{i.status}</span></h4>
+                <p className="text-sm text-gray-200 line-clamp-3">{i.overview}</p>
               </div>
             </div>
           </motion.div>
@@ -323,7 +328,7 @@ useEffect(() => {
                     <span className="text-sm text-gray-400 ml-2">{selectedItem.vj}</span>
                   </h2>
                    <p className="text-sm text-gray-300 mb-2">
-                         {selectedItem.year} • {selectedItem.genre.join(", ")}
+                         {selectedItem.release_date} • {selectedItem.genres.join(", ")}
                         </p>
                   {selectedItem.watch_url && (
                     <button
@@ -352,7 +357,7 @@ useEffect(() => {
                   </button>
                 </div>
                  <div className="flex-1 justify-between">
-                                        <Description text={selectedItem.description} limit={180} />
+                                        <Description text={selectedItem.overview} limit={180} />
                                       </div>
 
                 {/* More like this */}

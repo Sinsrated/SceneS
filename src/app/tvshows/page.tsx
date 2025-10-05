@@ -2,18 +2,19 @@
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { Play, SkipForward, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import Header from "../components/Header";
 import { supabase } from "../lib/supabaseClient";
 import Description from "../components/description";
+import VideoModal from "../components/videoplayer";
 
 interface Episode {
-  id: number;
-  title: string;
+  name: string;
   overview?: string;
   episode_number: number;
-  runtime?: string;
+  runtime?: number;
   still_path?: string;
+  video_url?: string;
 }
 
 interface Season {
@@ -25,19 +26,30 @@ interface Season {
   season_number: number;
   episodes?: Episode[];
 }
-// Type for tvshows
+
+interface Trailer {
+  id: string;
+  key: string;
+  name: string;
+  site: string;
+  size?: number;
+  type?: string;
+  official?: boolean;
+  published_at?: string;
+}
+
 interface Tvshows {
   id: number;
   title: string;
   poster_url: string;
   backdrop_url: string;
-  description: string;
-  year: string;
+  overview: string;
+  release_date: string;
   rating: number;
   episode?: number;
-  seasons?: number;
-  genre: string[];
-  trailer_url?: string;
+  seasons?: Season[];
+  genres: string[];
+  trailers?: unknown;
   created_at: string;
   vj?: string;
 }
@@ -48,7 +60,16 @@ const TvshowsPage = () => {
   const [loading, setLoading] = useState(true);
   const relatedRef = useRef<HTMLDivElement>(null);
   const [expandedSeason, setExpandedSeason] = useState<number | null>(null);
-  const [episodes, setEpisodes] = useState<Episode[] | null>(null);
+const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [currentTrailerIndex, setCurrentTrailerIndex] = useState(0);
+  const [seasonDropdownOpen, setSeasonDropdownOpen] = useState(false);
+const [relatedDropdownOpen, setRelatedDropdownOpen] = useState(false);
+
+
+ const [hovering, setHovering] = useState(false);
+ const [showSkipButton, setShowSkipButton] = useState(false);
+const [skipTimeout, setSkipTimeout] = useState<NodeJS.Timeout | null>(null);
+const iframeWrapperRef = useRef<HTMLDivElement>(null);
 
   // ✅ Fetch only tvshows
   useEffect(() => {
@@ -60,7 +81,6 @@ const TvshowsPage = () => {
           .order("created_at", { ascending: false });
 
         if (error) console.error("Error fetching tvshows:", error.message);
-
         setTvshowsList(data || []);
       } catch (err) {
         console.error("Unexpected fetch error:", err);
@@ -68,11 +88,19 @@ const TvshowsPage = () => {
         setLoading(false);
       }
     };
-
     fetchTvshows();
   }, []);
 
-  const scrollRelated = (direction: "left" | "right") => {
+  const handleInteraction = () => {
+  setShowSkipButton(true);
+  if (skipTimeout) clearTimeout(skipTimeout);
+
+
+const timeout = setTimeout(() => setShowSkipButton(false), 2000);
+  setSkipTimeout(timeout);
+};
+
+  const scroll = (direction: "left" | "right") => {
     if (relatedRef.current) {
       const scrollAmount = 200;
       relatedRef.current.scrollBy({
@@ -82,15 +110,60 @@ const TvshowsPage = () => {
     }
   };
 
-  // ✅ Related tvshows (same genre, exclude current one)
+  // ✅ Auto-expand season 1 when modal opens
+  useEffect(() => {
+    if (selectedTvshow?.seasons?.length) {
+      setExpandedSeason(selectedTvshow.seasons[0].season_number);
+    } else {
+      setExpandedSeason(null);
+    }
+  }, [selectedTvshow]);
+
+  const handleSeasonClick = (seasonNumber: number) => {
+    setExpandedSeason(expandedSeason === seasonNumber ? null : seasonNumber);
+  };
+
+  // ✅ Related tvshows
   const relatedTvshows = selectedTvshow
     ? tvshowsList.filter(
         (t) =>
           t.id !== selectedTvshow.id &&
-          t.genre?.some((g) => selectedTvshow.genre?.includes(g))
+          t.genres?.some((g) => selectedTvshow.genres?.includes(g))
       )
     : [];
+    const youtubeKeys: string[] = React.useMemo(() => {
+          if (!selectedTvshow?.trailers) return [];
+      
+          try {
+            let trailersObj;
+      
+            if (typeof selectedTvshow.trailers === "string") {
+              trailersObj = JSON.parse(selectedTvshow.trailers);
+            } else {
+              trailersObj = selectedTvshow.trailers;
+            }
+      
+            const trailerArray: Trailer[] = trailersObj?.trailers ?? [];
+      
+            return trailerArray
+              .filter((t) => t.site === "YouTube" && t.key)
+              .map((t) => t.key);
+          } catch (err) {
+            console.error("Failed to parse trailers JSON:", err);
+            return [];
+          }
+        }, [selectedTvshow]);
+      
+    
+        
+    
+      const nextTrailer = () => {
+        if (youtubeKeys.length === 0) return;
+        setCurrentTrailerIndex((prev) => (prev + 1) % youtubeKeys.length);
+      };
+  
 
+    
   return (
     <>
       <Header />
@@ -118,7 +191,7 @@ const TvshowsPage = () => {
           <p className="text-gray-400 text-center">No tvshows found.</p>
         )}
 
-        {/* Grid */}
+         {/* Grid of shows */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 x2:grid-cols-12 gap-6">
           {tvshowsList.map((t) => (
             <motion.div
@@ -143,203 +216,323 @@ const TvshowsPage = () => {
               </div>
               <div className="p-3">
                 <h3 className="text-gray-500 font-semibold truncate">{t.title}</h3>
-                <p className="text-sm text-gray-400">{t.year}</p>
+                <p className="text-sm text-gray-400">{t.release_date}</p>
               </div>
             </motion.div>
           ))}
         </div>
 
-        {/* Expanded modal */}
-        <AnimatePresence>
-          {selectedTvshow && (
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 50 }}
-              className="animate-presence-scroll fixed inset-0 bg-black/70 backdrop-blur-lg z-50 p-4 overflow-y-auto"
-            >
-              <div className="bg-white/10 rounded-2xl shadow-2xl max-w-5xl w-full mx-auto p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10">
-                <Image
-                  src={selectedTvshow.poster_url}
-                  alt={selectedTvshow.title}
-                  width={300}
-                  height={450}
-                  className="rounded-xl object-cover"
-                />
-                <div className="flex flex-col justify-between flex-1">
-                  <div>
-                    <h2 className="text-1x3 font-bold text-white mb-2">
-                      {selectedTvshow.title}
+        {/* Expanded view */}
+          <AnimatePresence>
+            {selectedTvshow && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="animate-presence-scroll fixed inset-0 z-[9999] bg-black/90 backdrop-blur-lg overflow-y-auto p-4"
+              >
+    <div className="flex flex-col md:flex-row gap-8 max-w-1xl mx-auto">
+      {/* Left Side */}
+      <div className="md:w-2/3 space-y-6">
+       <div
+        ref={iframeWrapperRef}
+        className="relative w-full aspect-video rounded-xl overflow-hidden shadow-lg"
+        onMouseMove={handleInteraction}
+        onTouchStart={handleInteraction}
+      >
+        {videoUrl ? (
+          <VideoModal url={videoUrl} onClose={() => setVideoUrl(null)} />
+        ) : youtubeKeys.length > 0 ? (
+          <iframe
+            key={youtubeKeys[currentTrailerIndex]}
+            src={`https://www.youtube.com/embed/${youtubeKeys[currentTrailerIndex]}?autoplay=0&controls=1&rel=0&modestbranding=1`}
+            title="YouTube trailer"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="w-full h-full"
+          />
+        ) : (
+          <p className="text-white text-center pt-10">No trailer available</p>
+        )}
+    
+        {/* SkipForward button with 2035 glass vibes */}
+        {youtubeKeys.length > 1 && (
+          <button
+            onClick={nextTrailer}
+            className={`absolute top-1/2 right-4 -translate-y-1/2 p-2 rounded-full text-white backdrop-blur-md bg-white/10 border border-white/20 shadow-lg transition-opacity duration-300 ${
+              showSkipButton ? "opacity-100" : "opacity-0"
+            } hover:bg-white/20`}
+          >
+            <SkipForward size={26} />
+          </button>
+        )}
+      </div>
+         <h2 className="text-2xl font-bold text-white">
+                      {selectedTvshow.title}{" "}
                       {selectedTvshow.vj && (
                         <span className="text-sm text-gray-400 ml-2">
                           {selectedTvshow.vj}
                         </span>
                       )}
                     </h2>
-
-                    <p className="text-sm opacity-70">{selectedTvshow.year}</p>
+                    <p className="text-gray-400 text-sm">{selectedTvshow.release_date}</p>
                     <p className="text-cyan-400 font-semibold">
                       ⭐ {selectedTvshow.rating}
                     </p>
-                   {/* Episodes */}
-{selectedTvshow.episode && (
-  <p className="text-sm opacity-70">
-    Episodes: {selectedTvshow.episode}
-  </p>
-)}
-
-{/* Seasons */}
-{Array.isArray(selectedTvshow.seasons) && selectedTvshow.seasons.length > 0 && (
-  <div className="mt-2 space-y-2">
-    <p className="text-sm opacity-70 font-semibold">
-      Seasons: {selectedTvshow.seasons.length}
-    </p>
-
-    <div className="space-y-2">
-      {selectedTvshow.seasons.map((season, i) => (
-        <div key={i} className="bg-white/5 rounded-lg p-2">
-          {/* Season header */}
-          <div
-            className="flex items-center gap-3 cursor-pointer hover:bg-white/10 rounded-lg p-2"
-            onClick={() =>
-              setExpandedSeason(expandedSeason === i ? null : i)
-            }
+                     {/* Description */} 
+    
+                    <Description text={selectedTvshow.overview} limit={180} />
+    
+        {/* Related / More like this - desktop scroll */}
+        {relatedTvshows.length > 0 && (
+          <div className="relative mt-6">
+            <h3 className="text-xl font-bold text-white mb-3">More like {selectedTvshow.title}</h3>
+    
+            {/* Desktop scroll buttons */}
+      {hovering && (
+          <>
+     <button
+            onClick={() => scroll("left")}
+            className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full transition-opacity"
           >
-            {season.poster_path && (
-              <Image
-                src={season.poster_path}
-                alt={season.name}
-                width={60}
-                height={90}
-                className="rounded-lg object-cover"
-              />
-            )}
-            <div className="flex-1">
-              <p className="text-white font-semibold">{season.name}</p>
-              <p className="text-xs text-gray-400">
-                {season.episode_count} episodes
-              </p>
-            </div>
-            <span className="text-gray-400">
-              {expandedSeason === i ? "−" : "+"}
-            </span>
-          </div>
+            <ChevronLeft size={28} />
+          </button>
+          <button
+            onClick={() => scroll("right")}
+            className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full transition-opacity"
+          >
+            <ChevronRight size={28} />
+          </button>
+    </>
+        )}
 
-          {/* Episodes list (expandable) */}
-          {expandedSeason === i && episodes && (
-            <div className="pl-4 mt-2 space-y-2">
-              {episodes.map((ep) => (
-                <div
-                  key={ep.id}
-                  className="bg-black/30 rounded-lg p-2 flex items-start gap-3"
-                >
-                  {ep.still_path && (
-                    <Image
-                      src={ep.still_path}
-                      alt={ep.title}
-                      width={100}
-                      height={60}
-                      className="rounded-md object-cover"
-                    />
-                  )}
-                  <div>
-                    <p className="text-white font-medium">
-                      Ep {ep.episode_number}: {ep.title}
-                    </p>
-                    {ep.overview && (
-                      <p className="text-xs text-gray-400 line-clamp-2">
-                        {ep.overview}
-                      </p>
-                    )}
-                  </div>
-                </div>
+    {/* Scrollable container */}
+    <div
+      ref={relatedRef}
+       className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth relative"
+      >{relatedTvshows.map((r) => (
+                <Image
+                  key={r.id}
+                  src={r.poster_url}
+                  alt={r.title}
+                  width={130}
+                  height={180}
+                  className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
+                  onClick={() => {
+                    setSelectedTvshow(r);
+                    setVideoUrl(null);
+                  }}
+                />
               ))}
             </div>
+    
+            {/* Mobile dropdown */}
+            <div className="md:hidden relative mt-2">
+              <button
+                className="w-full bg-white/5 text-white p-2 rounded-lg flex justify-between items-center hover:bg-white/10"
+                onClick={() => setRelatedDropdownOpen((prev) => !prev)}
+              >
+                <span>More like this</span>
+                <svg
+                  className={`w-4 h-4 transform transition-transform duration-200 ${
+                    relatedDropdownOpen ? "rotate-180" : ""
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+              {relatedDropdownOpen && (
+                <div className="absolute w-full mt-1 bg-white/5 rounded-lg max-h-60 overflow-y-auto z-50 shadow-lg flex flex-col gap-2 p-2">
+                  {relatedTvshows.map((r) => (
+                    <div
+                      key={r.id}
+                      className="cursor-pointer p-2 hover:bg-white/10 rounded-lg flex items-center gap-2"
+                      onClick={() => {
+                        setSelectedTvshow(r);
+                        setVideoUrl(null);
+                        setRelatedDropdownOpen(false);
+                      }}
+                    >
+                      <Image
+                        src={r.poster_url}
+                        alt={r.title}
+                        width={60}
+                        height={80}
+                        className="rounded-lg object-cover"
+                      />
+                      <span className="text-white">{r.title}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    
+    
+    
+                  {/* Right Side */}
+                  <div className="md:w-1/3 flex flex-col gap-4">
+                     {/* Season Selector */}
+                    <div className="w-full max-w-md relative">
+                      <button
+                        className="w-full bg-white/5 text-white flex justify-between items-center p-2 rounded-lg hover:bg-white/10"
+                        onClick={() => setSeasonDropdownOpen((prev) => !prev)}
+                      >
+                        <span>
+                          {selectedTvshow.seasons?.find(
+                            (s) => s.season_number === expandedSeason
+                          )?.name || "Select Season"}
+                        </span>
+                        <svg
+                          className={`w-4 h-4 transform transition-transform duration-200 ${
+                            seasonDropdownOpen ? "rotate-180" : ""
+                          }`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </button>
+    
+                      {seasonDropdownOpen && (
+                        <div className="absolute w-full mt-1 bg-white/5 rounded-lg max-h-60 overflow-y-auto z-50 shadow-lg">
+                          {selectedTvshow.seasons?.map((season) => (
+                            <div
+                              key={season.season_number}
+                              className={`cursor-pointer p-2 hover:bg-white/30 ${
+                                expandedSeason === season.season_number
+                                  ? "bg-white/30"
+                                  : ""
+                              }`}
+                              onClick={() => {
+                                setExpandedSeason(season.season_number);
+                                setSeasonDropdownOpen(false);
+                              }}
+                            >
+                              {season.name}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+    
+                    {/* Episodes */}
+                    <div className="space-y-3 mt-4">
+                      {selectedTvshow.seasons
+                        ?.find((s) => s.season_number === expandedSeason)
+                        ?.episodes?.map((ep, i) => (
+                          <div
+                            key={i}
+                            className="bg-black/30 rounded-lg p-2 flex items-start gap-3"
+                          ><div className="bg-black/30 rounded-lg p-2 flex items-start gap-3 relative">
+      {ep.still_path && (
+     <div className="relative w-[100px] h-[60px] flex-shrink-0">
+      <Image
+        src={ep.still_path}
+        alt={ep.name}
+        fill
+        className="rounded-md object-cover"
+      />
+      {/* Play button overlay */}
+      {ep.video_url && (
+        <button
+          onClick={() => setVideoUrl(ep.video_url!)}
+          className="absolute inset-0 flex items-center justify-center rounded-md
+                     bg-white/5  border border-white/20
+                     hover:bg-white/20 transition-all duration-300 shadow-[0_0_10px_rgba(0,255,255,0.5)]"
+        >
+          <Play size={20} className="text-cyan-400 hover:text-cyan-300 transition-colors duration-200" />
+        </button>
+      )}
+    </div>
+    
+      )}
+    
+      <div className="flex-1 flex flex-col justify-between">
+        <div>
+          <p className="text-white font-medium">
+            Ep {ep.episode_number}: {ep.name}
+          </p>
+          {ep.runtime && (
+            <p className="text-xs text-gray-400">{ep.runtime} min</p>
+          )}
+          {ep.overview && (
+            <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+              {ep.overview}
+            </p>
           )}
         </div>
-      ))}
+      {/* Download button in top-right corner */}
+      {ep.video_url && (
+        <div className="absolute top-1 right-1">
+          <button
+            className="text-xs text-cyan-400 px-2 py-1 bg-black/30 backdrop-blur-md rounded-md hover:bg-black/50 flex items-center gap-1 transition"
+            onClick={async () => {
+              try {
+                const response = await fetch(ep.video_url!);
+                if (!response.ok) throw new Error("Failed to fetch video");
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+    
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = `${ep.name}.mp4`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+    
+                window.URL.revokeObjectURL(url);
+              } catch (err) {
+                console.error(err);
+                alert("Download failed");
+              }
+            }}
+          >
+            <Download size={14} /> Download
+          </button>
+        </div>
+      )}
+    
+    
+        </div>
+      </div>
     </div>
-  </div>
-)}
-
-
-                  </div>
-
-                  {/* Buttons */}
-                  <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
-                    <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                      <Play size={18} />
-                    </button>
-                    <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                      <Download size={18} />
-                      Download
-                    </button>
-                    {selectedTvshow.trailer_url && (
-                      <a
-                        href={selectedTvshow.trailer_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition"
-                      >
-                        <Play size={18} /> Trailer
-                      </a>
-                    )}
-                  </div>
-
-                  <div className="flex-1 justify-between">
-                    <Description text={selectedTvshow.description} limit={180} />
-                  </div>
-
-                  {/* Related tvshows */}
-                  {relatedTvshows.length > 0 && (
-                    <div className="relative mt-4">
-                      <h3 className="text-xl font-bold text-white mb-3">
-                        More like {selectedTvshow.title}
-                      </h3>
-
-                      <button
-                        onClick={() => scrollRelated("left")}
-                        className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
-                      >
-                        <ChevronLeft size={28} />
-                      </button>
-                      <button
-                        onClick={() => scrollRelated("right")}
-                        className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
-                      >
-                        <ChevronRight size={28} />
-                      </button>
-
-                      <div
-                        ref={relatedRef}
-                        className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x"
-                      >
-                        {relatedTvshows.map((r) => (
-                          <div key={r.id} className="flex-shrink-0 snap-start">
-                            <Image
-                              src={r.poster_url}
-                              alt={r.title}
-                              width={120}
-                              height={180}
-                              className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
-                              onClick={() => setSelectedTvshow(r)}
-                            />
-                          </div>
-                        ))}
-                      </div>
+     ))}
                     </div>
-                  )}
+    
+                   
+                  </div>
                 </div>
+    
+                {/* Close */}
                 <button
-                  className="absolute top-4 right-4 text-white text-2xl"
+                  className="absolute top-2 right-2 text-white text-2xl"
                   onClick={() => setSelectedTvshow(null)}
                 >
                   ✕
                 </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                
+              </motion.div>
+            )}
+          </AnimatePresence>
       </section>
     </>
   );

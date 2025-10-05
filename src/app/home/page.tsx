@@ -14,16 +14,15 @@ export default function Home() {
   
    return(
      <>
-    
+
      <HeroCarousel /> 
      <Header />
-     <Trending />
      <LatestMovies />
      <Animation />
      <LatestSeries />
      <LatestDrama />
      <AniSerie />
-     <Footer /> 
+     <Footer />
      </> 
    );
     

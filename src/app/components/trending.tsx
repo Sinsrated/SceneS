@@ -5,22 +5,25 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Play, Download, ChevronLeft, ChevronRight, Bookmark } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import Description from "./description";
+import { release } from "os";
 
 interface Item {
   id: number;
-  type: "movie" | "series";
+  type: "movie" | "tvshows";
   title: string;
   vj: string;
   poster_url: string;
   backdrop_url: string;
   description: string;
-  year: string;
-  rating?: number;
-  genre: string[];
+  release_date: string;
+  cast?: string[];
+  genres: string[];
   trailer_url?: string;
   watch_url?: string;
   episodes?: number;
   seasons?: number;
+  status?: string;
+  created_at: number;
 }
 
 const Trending = () => {
@@ -30,72 +33,110 @@ const Trending = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const relatedRef = React.useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const { data: moviesData, error: movieErr } = await supabase
-          .from("movies")
-          .select("*")
-          .order("rating", { ascending: false })
-          .limit(10);
+useEffect(() => {
+  const fetchTrending = async () => {
+    try {
+      // ✅ Get date for "this week"
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
 
-        if (movieErr) console.error("Movies fetch error:", movieErr.message);
+      // ✅ Get aggregated views count
+      const { data: viewsData, error: viewsError } = await supabase
+        .from("views")
+        .select("item_id, item_type")
+        .gte("created_at", weekAgo.toISOString());
 
-        const { data: seriesData, error: seriesErr } = await supabase
-          .from("series")
-          .select("*")
-          .order("rating", { ascending: false })
-          .limit(10);
-
-        if (seriesErr) console.error("Series fetch error:", seriesErr.message);
-
-        const combined: Item[] = [
-          ...(moviesData?.map((m) => ({
-            id: m.id ?? 0,
-            type: "movie" as const,
-            title: m.title ?? "Untitled",
-            poster_url: m.poster_url ?? "",
-            backdrop_url: m.backdrop_url ?? "",
-            year: m.year ?? "",
-            vj: m.vj ?? "unknown",
-            description: m.description ?? "",
-            watch_url: m.watch_url ?? undefined,
-            trailer_url: m.trailer_url ?? undefined,
-            rating: m.rating ?? 0,
-            genre: m.genre ?? [],
-          })) ?? []),
-          ...(seriesData?.map((s) => ({
-            id: s.id ?? 0,
-            type: "series" as const,
-            title: s.title ?? "Untitled",
-            poster_url: s.poster_url ?? "",
-            backdrop_url: s.backdrop_url ?? "",
-            year: s.year ?? "",
-            vj: s.vj ?? "unknown",
-            description: s.description ?? "",
-            watch_url: s.watch_url ?? undefined,
-            trailer_url: s.trailer_url ?? undefined,
-            rating: s.rating ?? 0,
-            genre: s.genre ?? [],
-            episodes: s.episodes ?? undefined,
-            seasons: s.seasons ?? undefined,
-          })) ?? []),
-        ];
-
-        const sorted = combined
-          .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
-          .slice(0, 10);
-
-        setItems(sorted);
-      } catch (err) {
-        console.error("Fetch error:", err);
-      } finally {
-        setLoading(false);
+      if (viewsError) {
+        console.error("Views fetch error:", viewsError.message);
+        return;
       }
-    };
 
-    fetchData();
-  }, []);
+      // Group by item_id & item_type in JS since Supabase doesn’t yet aggregate well
+      const viewCountMap: Record<string, { item_id: number; item_type: string; count: number }> = {};
+      (viewsData ?? []).forEach((v) => {
+        const key = `${v.item_type}-${v.item_id}`;
+        if (!viewCountMap[key]) {
+          viewCountMap[key] = { ...v, count: 0 };
+        }
+        viewCountMap[key].count++;
+      });
+
+      // Sort trending by count (descending) & take top 20
+      const trending = Object.values(viewCountMap)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 20);
+
+      const items: Item[] = [];
+
+      // Fetch details for each item
+      for (const v of trending) {
+        if (v.item_type === "movie") {
+          const { data: movie } = await supabase
+            .from("movies")
+            .select("*")
+            .eq("id", v.item_id)
+            .single();
+
+          if (movie) {
+           items.push({
+  id: movie.id,
+  type: "movie",
+  title: movie.title ?? "Untitled",
+  poster_url: movie.poster_url ?? "",
+  backdrop_url: movie.backdrop_url ?? "",
+  release_date: movie.release_date ?? "",
+  vj: movie.vj ?? "unknown",
+  description: movie.description ?? "",
+  watch_url: movie.watch_url ?? undefined,
+  trailer_url: movie.trailer_url ?? undefined,
+   cast: movie.cast ? movie.cast.split(",").map((c: string) => c.trim()) : [],
+  genres: movie.genres ?? [],
+  created_at: new Date(movie.created_at).getTime(), // ✅ add this
+});
+
+          }
+        } else if (v.item_type === "tvshows") {
+          const { data: show } = await supabase
+            .from("tvshows")
+            .select("*")
+            .eq("id", v.item_id)
+            .single();
+
+          if (show) {
+            items.push({
+              id: show.id,
+              type: "tvshows",
+              title: show.title ?? "Untitled",
+              poster_url: show.poster_url ?? "",
+              backdrop_url: show.backdrop_url ?? "",
+              release_date: show.release_date ?? "",
+              vj: show.vj ?? "unknown",
+              description: show.description ?? "",
+              watch_url: show.watch_url ?? undefined,
+              trailer_url: show.trailer_url ?? undefined,
+             cast: show.cast ? show.cast.split(",").map((c: string) => c.trim()) : [],
+              genres: show.genres ?? [],
+              episodes: show.episodes ?? undefined,
+              seasons: show.seasons ?? undefined,
+              status: show.status ?? undefined,
+              created_at: new Date(show.created_at).getTime(),
+
+            });
+          }
+        }
+      }
+
+      setItems(items);
+    } catch (err) {
+      console.error("Trending fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchTrending();
+}, []);
+
 
    const scrollRelated = (direction: "left" | "right") => {
     if (relatedRef.current) {
@@ -112,7 +153,7 @@ const Trending = () => {
         (i) =>
           i.id !== selectedItem.id &&
           i.type === selectedItem.type &&
-          i.genre.some((g) => selectedItem.genre.includes(g))
+          i.genres.some((g) => selectedItem.genres.includes(g))
       )
     : [];
 
@@ -210,7 +251,7 @@ const Trending = () => {
                           <span className="text-sm text-gray-400 ml-2">{selectedItem.vj}</span>
                         </h2>
                          <p className="text-sm text-gray-300 mb-2">
-                          {selectedItem.year} • {selectedItem.genre.join(", ")}
+                          {selectedItem.release_date} • {selectedItem.genres.join(", ")}
                         </p>
                         {selectedItem.watch_url && (
                           <button
