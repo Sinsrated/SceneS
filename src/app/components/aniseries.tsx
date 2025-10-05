@@ -284,96 +284,100 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
       <div className="relative mt-6">
         <h3 className="text-xl font-bold text-white mb-3">More like {selectedTvshow.title}</h3>
 
-        {/* Desktop scroll buttons */}
-        <div
-          className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
-          onClick={() => {
-            const row = document.getElementById("related-row");
-            if (row) row.scrollBy({ left: -250, behavior: "smooth" });
-          }}
-        >
-          <ChevronLeft size={24} />
-        </div>
-        <div
-          className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
-          onClick={() => {
-            const row = document.getElementById("related-row");
-            if (row) row.scrollBy({ left: 250, behavior: "smooth" });
-          }}
-        >
-          <ChevronRight size={24} />
-        </div>
+ {/* Desktop scroll section */}
+    <div className="hidden md:block relative">
+      {/* Desktop scroll buttons */}
+      {hovering && (
+        <>
+          <button
+            onClick={() => scroll("left")}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full transition-opacity"
+          >
+            <ChevronLeft size={28} />
+          </button>
+          <button
+            onClick={() => scroll("right")}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full transition-opacity"
+          >
+            <ChevronRight size={28} />
+          </button>
+        </>
+      )}
 
-        <div id="related-row" className="hidden md:flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth group">
+      {/* Scrollable container */}
+      <div
+        ref={relatedRef}
+        className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth relative"
+      >
+        {relatedTvshows.map((r) => (
+          <Image
+            key={r.id}
+            src={r.poster_url}
+            alt={r.title}
+            width={130}
+            height={180}
+            className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
+            onClick={() => {
+              setSelectedTvshow(r);
+              setVideoUrl(null);
+            }}
+          />
+        ))}
+      </div>
+    </div>
+
+    {/* Mobile dropdown */}
+    <div className="md:hidden relative mt-2">
+      <button
+        className="w-full bg-white/5 text-white p-2 rounded-lg flex justify-between items-center hover:bg-white/10"
+        onClick={() => setRelatedDropdownOpen((prev) => !prev)}
+      >
+        <span>More like this</span>
+        <svg
+          className={`w-4 h-4 transform transition-transform duration-200 ${
+            relatedDropdownOpen ? "rotate-180" : ""
+          }`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </button>
+
+      {relatedDropdownOpen && (
+        <div className="absolute w-full mt-1 bg-white/5 rounded-lg max-h-60 overflow-y-auto z-50 shadow-lg flex flex-col gap-2 p-2">
           {relatedTvshows.map((r) => (
-            <Image
+            <div
               key={r.id}
-              src={r.poster_url}
-              alt={r.title}
-              width={130}
-              height={180}
-              className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
+              className="cursor-pointer p-2 hover:bg-white/10 rounded-lg flex items-center gap-2"
               onClick={() => {
                 setSelectedTvshow(r);
                 setVideoUrl(null);
+                setRelatedDropdownOpen(false);
               }}
-            />
+            >
+              <Image
+                src={r.poster_url}
+                alt={r.title}
+                width={60}
+                height={80}
+                className="rounded-lg object-cover"
+              />
+              <span className="text-white">{r.title}</span>
+            </div>
           ))}
         </div>
-
-        {/* Mobile dropdown */}
-        <div className="md:hidden relative mt-2">
-          <button
-            className="w-full bg-white/5 text-white p-2 rounded-lg flex justify-between items-center hover:bg-white/10"
-            onClick={() => setRelatedDropdownOpen((prev) => !prev)}
-          >
-            <span>More like this</span>
-            <svg
-              className={`w-4 h-4 transform transition-transform duration-200 ${
-                relatedDropdownOpen ? "rotate-180" : ""
-              }`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </button>
-          {relatedDropdownOpen && (
-            <div className="absolute w-full mt-1 bg-white/5 rounded-lg max-h-60 overflow-y-auto z-50 shadow-lg flex flex-col gap-2 p-2">
-              {relatedTvshows.map((r) => (
-                <div
-                  key={r.id}
-                  className="cursor-pointer p-2 hover:bg-white/10 rounded-lg flex items-center gap-2"
-                  onClick={() => {
-                    setSelectedTvshow(r);
-                    setVideoUrl(null);
-                    setRelatedDropdownOpen(false);
-                  }}
-                >
-                  <Image
-                    src={r.poster_url}
-                    alt={r.title}
-                    width={60}
-                    height={80}
-                    className="rounded-lg object-cover"
-                  />
-                  <span className="text-white">{r.title}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    )}
+      )}
+    </div>
   </div>
-
-
+)}
+  </div>
 
               {/* Right Side */}
               <div className="md:w-1/3 flex flex-col gap-4">
