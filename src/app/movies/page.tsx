@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { PlayCircleIcon, Download, SkipForwardIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import Header from "../components/Header";
 import { supabase } from "../lib/supabaseClient";
 import VideoModal from "../components/videoplayer";
@@ -13,15 +13,28 @@ interface Movie {
   title: string;
   poster_url: string;
   backdrop_url: string;
-  description: string;
+  overview: string;
   year: string;
   rating: number;
-  genre: string[];
-  trailer_url?: string;
+  genres: string[];
+  trailers?: string;
   watch_url?: string; 
   created_at: string;
   vj?: string;
+  video_url?: string;
 }
+
+interface Trailer {
+  id: string;
+  key: string;
+  name: string;
+  site: string;
+  size?: number;
+  type?: string;
+  official?: boolean;
+  published_at?: string;
+}
+
 
 const MoviesPage = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -29,6 +42,14 @@ const MoviesPage = () => {
   const [loading, setLoading] = useState(true);
   const relatedRef = React.useRef<HTMLDivElement>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    const [relatedDropdownOpen, setRelatedDropdownOpen] = useState(false);
+  
+    const [hovering, setHovering] = useState(false);
+    const [showSkipButton, setShowSkipButton] = useState(false);
+    const [skipTimeout, setSkipTimeout] = useState<NodeJS.Timeout | null>(null);
+    const iframeWrapperRef = React.useRef<HTMLDivElement>(null);
+    const [currentTrailerIndex, setCurrentTrailerIndex] = useState(0);
+  
 
   // ✅ Fetch only movies
   useEffect(() => {
@@ -52,22 +73,44 @@ const MoviesPage = () => {
     fetchMovies();
   }, []);
 
-  const scrollRelated = (direction: "left" | "right") => {
-    if (relatedRef.current) {
-      const scrollAmount = 200;
-      relatedRef.current.scrollBy({
-        left: direction === "left" ? -scrollAmount : scrollAmount,
-        behavior: "smooth",
-      });
-    }
+   const handleInteraction = () => {
+    setShowSkipButton(true);
+    if (skipTimeout) clearTimeout(skipTimeout);
+    const timeout = setTimeout(() => setShowSkipButton(false), 2000);
+    setSkipTimeout(timeout);
   };
+
+    const youtubeKeys: string[] = React.useMemo(() => {
+      if (!selectedMovie?.trailers) return [];
+  
+      try {
+        const trailersObj =
+          typeof selectedMovie.trailers === "string"
+            ? JSON.parse(selectedMovie.trailers)
+            : selectedMovie.trailers;
+  
+        const trailerArray: Trailer[] = trailersObj?.trailers ?? [];
+  
+        return trailerArray
+          .filter((t) => t.site === "YouTube" && t.key)
+          .map((t) => t.key);
+      } catch (err) {
+        console.error("Failed to parse trailers JSON:", err);
+        return [];
+      }
+    }, [selectedMovie]);
+  
+    const nextTrailer = () => {
+      if (youtubeKeys.length === 0) return;
+      setCurrentTrailerIndex((prev) => (prev + 1) % youtubeKeys.length);
+    };
 
   // ✅ Related movies (same genre overlap, exclude current one)
   const relatedMovies = selectedMovie
     ? movies.filter(
         (m) =>
           m.id !== selectedMovie.id &&
-          m.genre?.some((g) => selectedMovie.genre?.includes(g))
+          m.genres?.some((g) => selectedMovie.genres?.includes(g))
       )
     : [];
 
@@ -83,10 +126,13 @@ const MoviesPage = () => {
                 key={i}
                 className="bg-white/10 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden animate-pulse"
               >
+                 <p className="absolute top-1 right-2 bg-black/40 text-white text-xs font-semibold px-2 py-1 rounded-lg">
+                    
+                  </p>
                 <div className="w-full h-55 bg-black/40"></div>
                 <div className="p-3 space-y-2">
                   <div className="h-4 bg-black/40 rounded w-3/4"></div>
-                  <div className="h-3 bg-black/40 rounded w-1/2"></div>
+                  
                 </div>
               </div>
             ))}
@@ -125,103 +171,205 @@ const MoviesPage = () => {
           ))}
         </div>
 
-        {/* Expanded Modal */}
+          {/* Selected movie modal */}
         <AnimatePresence>
           {selectedMovie && (
             <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 50 }}
-              className="animate-presence-scroll fixed inset-0 bg-black/70 backdrop-blur-lg z-50 p-4 overflow-y-auto"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="animate-presence-scroll fixed inset-0 z-[9999] bg-black/90 backdrop-blur-lg overflow-y-auto p-4"
             >
-              <div className="bg-white/5 rounded-2xl shadow-2xl max-w-5xl w-full mx-auto p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10">
-                <Image
-                  src={selectedMovie.poster_url}
-                  alt={selectedMovie.title}
-                  width={300}
-                  height={450}
-                  className="rounded-xl object-cover"
-                />
-                <div className="flex flex-col justify-between flex-1">
-                  <div>
-                    <h2 className="text-1x3 font-bold text-white mb-2">
-                      {selectedMovie.title}
-                      <span className="text-sm text-gray-400 ml-2">{selectedMovie.vj}</span>
+              <div className="flex flex-col md:flex-row gap-8 max-w-1xl mx-auto ">
+                {/* Video Section */}
+                <div className="md:w-2/3 space-y-6">
+                  <div
+                    ref={iframeWrapperRef}
+                    className="relative w-full top-5 aspect-video rounded-xl overflow-hidden shadow-lg"
+                    onMouseMove={handleInteraction}
+                    onTouchStart={handleInteraction}
+                  >
+                    {videoUrl ? (
+                      <VideoModal
+                        url={videoUrl}
+                        onClose={() => setVideoUrl(null)}
+                      />
+                    ) : youtubeKeys.length > 0 ? (
+                      <iframe
+                        key={youtubeKeys[currentTrailerIndex]}
+                        src={`https://www.youtube.com/embed/${youtubeKeys[currentTrailerIndex]}?autoplay=0&controls=1&rel=0&modestbranding=1`}
+                        title="YouTube trailer"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="w-full h-full"
+                      />
+                    ) : (
+                      <p className="text-white text-center pt-10">
+                        No trailer available
+                      </p>
+                    )}
+
+                    {youtubeKeys.length > 1 && (
+                      <button
+                        onClick={nextTrailer}
+                        className={`absolute top-1/2 right-4 -translate-y-1/2 p-2 rounded-full text-white backdrop-blur-md bg-white/10 border border-white/20 shadow-lg transition-opacity duration-300 ${
+                          showSkipButton ? "opacity-100" : "opacity-0"
+                        } hover:bg-white/20`}
+                      >
+                        <SkipForwardIcon size={26} />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="text-white space-y-2">
+                    <h2 className="text-xl font-bold">
+                      {selectedMovie.title}{" "}
+                      <span className="text-sm text-gray-400 ml-2">
+                        {selectedMovie.vj}
+                      </span>
                     </h2>
-                  
-                    <p className="text-sm opacity-70"> {selectedMovie.year}</p>
+                    <p className="text-sm opacity-70">{selectedMovie.year}</p>
                     <p className="text-cyan-400 font-semibold">
                       ⭐ {selectedMovie.rating}
                     </p>
-                  </div>
 
-                  {/* Buttons */}
-                  <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
-                    {selectedMovie.trailer_url && (
+                    <div className="flex flex-row items-center gap-4 mt-4">
+                    {selectedMovie.video_url && (
                       <button
-                        className="bg-cyan-500 px-4 py-2 rounded-xl"
-                        onClick={() => setVideoUrl(selectedMovie.trailer_url!)}
+                        onClick={() =>
+                          setVideoUrl(selectedMovie.video_url as string)
+                        }
+                        className="flex items-center gap-2   px-4 py-2 rounded-xl text-cyan-400 hover:bg-white/20 "
                       >
-                        Play Trailer
+                        <PlayCircleIcon size={20} /> Play
                       </button>
                     )}
 
-                    {selectedMovie.watch_url && (
-                      <button
-                        className="bg-green-500 px-4 py-2 rounded-xl"
-                        onClick={() => setVideoUrl(selectedMovie.watch_url!)}
-                      >
-                        Play Movie
-                      </button>
-                    )}
+{/* Download button in top-right corner */}
+                 {selectedMovie?.video_url && (
+  <button
+    className="text-xs text-cyan-400 px-2 py-1 bg-black/30 backdrop-blur-md rounded-md hover:bg-white/20 flex items-center gap-1 transition"
+    onClick={async () => {
+      try {
+        const videoUrl = selectedMovie?.video_url?.replace(/^http:/, "https:"); // force HTTPS
 
-                    
+        if (!videoUrl) {
+          alert("⚠️ No video URL found for this movie.");
+          return;
+        }
+
+        const response = await fetch(videoUrl, { mode: "cors" });
+        if (!response.ok) throw new Error(`Failed to fetch video. Status: ${response.status}`);
+
+        const blob = await response.blob();
+        const objectUrl = window.URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = `${selectedMovie?.title || "movie"}.mp4`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        window.URL.revokeObjectURL(objectUrl);
+      } catch (error) {
+        console.error("❌ Download failed:", error);
+        alert("⚠️ Download failed. Check the video link or permissions.");
+      }
+    }}
+  >
+    <Download size={14} /> Download
+  </button>
+)}
+                      </div>
+
+                    <Description
+                      text={selectedMovie.overview}
+                      limit={180}
+                    />
                   </div>
-                     <div className="flex-1 justify-between">
-                                                            <Description text={selectedMovie.description} limit={180} />
-                                                          </div>
+                </div>
 
-                  {/* Related */}
-                  {relatedMovies.length > 0 && (
-                    <div className="relative mt-4">
-                      <h3 className="text-xl font-bold text-white mb-3">More like {selectedMovie.title}</h3>
+                {/* Related Movies */}
+                {relatedMovies.length > 0 && (
+                  <div className="flex-1 mt-6">
+                    <h3 className="text-xl font-bold text-white mb-3">
+                      More like {selectedMovie.title}
+                    </h3>
 
-                      {/* Scroll buttons for desktop */}
-                      <button
+                    {/* Desktop scroll */}
+                    <div className="hidden md:block relative">
+                      {/* <button
                         onClick={() => scrollRelated("left")}
-                        className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full"
                       >
                         <ChevronLeft size={28} />
                       </button>
                       <button
                         onClick={() => scrollRelated("right")}
-                        className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
+                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full"
                       >
                         <ChevronRight size={28} />
-                      </button>
+                      </button> */}
 
                       <div
                         ref={relatedRef}
-                        className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x"
+                        className="animate-presence-scroll grid grid-cols-3 flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth relative"
                       >
                         {relatedMovies.map((r) => (
-                          <div key={r.id} className="flex-shrink-0 snap-start">
-                            <Image
-                              src={r.poster_url}
-                              alt={r.title}
-                              width={120}
-                              height={180}
-                              className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
-                              onClick={() => setSelectedMovie(r)}
-                            />
-                          </div>
+                          <Image
+                            key={r.id}
+                            src={r.poster_url}
+                            alt={r.title}
+                            width={130}
+                            height={180}
+                            className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
+                            onClick={() => {
+                              setSelectedMovie(r);
+                              setVideoUrl(null);
+                            }}
+                          />
                         ))}
                       </div>
                     </div>
-                  )}
-                </div>
+
+                    {/* Mobile dropdown */}
+                   <div className="md:hidden relative mt-2">
+  <button
+    className="w-full bg-white/5 text-white p-2 rounded-lg flex justify-between items-center hover:bg-white/10"
+    onClick={() => setRelatedDropdownOpen((prev) => !prev)}
+  >
+    <span>More like this</span>
+    <ChevronRight
+      className={`w-4 h-4 transform transition-transform duration-200 ${
+        relatedDropdownOpen ? "rotate-90" : ""
+      }`}
+    />
+  </button>
+
+  {relatedDropdownOpen && (
+    <div className="animate-presence-scroll absolute w-full mt-1 bg-white/5 rounded-lg max-h-60 overflow-y-auto z-50 shadow-lg grid grid-cols-2 gap-2 p-2">
+      {relatedMovies.map((m) => (
+        <div key={m.id} className="flex justify-center">
+          <Image
+            src={m.poster_url}
+            alt={m.title}
+            width={120}
+            height={180}
+            className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
+            onClick={() => setSelectedMovie(m)}
+          />
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+  </div>
+                )}
+                {/* Close Button */}
                 <button
-                  className="absolute top-4 right-4 text-white text-2xl"
+                  className="absolute top-2 right-2 text-white text-2xl"
                   onClick={() => setSelectedMovie(null)}
                 >
                   ✕

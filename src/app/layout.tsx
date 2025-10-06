@@ -3,8 +3,8 @@ import "./globals.css";
 import ThemeToggle from "./components/ThemeToggle";
 
 export const metadata: Metadata = {
-  title: "My Movie App",
-  description: "Movie website with theme support",
+  title: "Kyogobe Watch",
+  description: "watch free movies and tv shows online",
 };
 
 export default function RootLayout({

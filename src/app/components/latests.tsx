@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, SkipForward, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { Play, SkipForward, Download, ChevronLeft, ChevronRight, PlayIcon, PlaySquareIcon, PlayCircleIcon } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import Description from "../components/description";
 import VideoModal from "./videoplayer";
@@ -234,7 +234,7 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
   <div className="md:w-2/3 space-y-6">
    <div
     ref={iframeWrapperRef}
-    className="relative w-full aspect-video rounded-xl overflow-hidden shadow-lg"
+    className="relative w-full top-5 aspect-video rounded-xl overflow-hidden shadow-lg"
     onMouseMove={handleInteraction}
     onTouchStart={handleInteraction}
   >
@@ -281,110 +281,6 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
                  {/* Description */} 
 
                 <Description text={selectedTvshow.overview} limit={180} />
-
-   {/* Related / More like this - desktop scroll */}
-{relatedTvshows.length > 0 && (
-  <div className="relative mt-6">
-    <h3 className="text-xl font-bold text-white mb-3">
-      More like {selectedTvshow.title}
-    </h3>
-
-    {/* Desktop scroll section */}
-    <div className="hidden md:block relative">
-      {/* Desktop scroll buttons */}
-      {hovering && (
-        <>
-          <button
-            onClick={() => scroll("left")}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full transition-opacity"
-          >
-            <ChevronLeft size={28} />
-          </button>
-          <button
-            onClick={() => scroll("right")}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full transition-opacity"
-          >
-            <ChevronRight size={28} />
-          </button>
-        </>
-      )}
-
-      {/* Scrollable container */}
-      <div
-        ref={relatedRef}
-        className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth relative"
-      >
-        {relatedTvshows.map((r) => (
-          <Image
-            key={r.id}
-            src={r.poster_url}
-            alt={r.title}
-            width={130}
-            height={180}
-            className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
-            onClick={() => {
-              setSelectedTvshow(r);
-              setVideoUrl(null);
-            }}
-          />
-        ))}
-      </div>
-    </div>
-
-    {/* Mobile dropdown */}
-    <div className="md:hidden relative mt-2">
-      <button
-        className="w-full bg-white/5 text-white p-2 rounded-lg flex justify-between items-center hover:bg-white/10"
-        onClick={() => setRelatedDropdownOpen((prev) => !prev)}
-      >
-        <span>More like this</span>
-        <svg
-          className={`w-4 h-4 transform transition-transform duration-200 ${
-            relatedDropdownOpen ? "rotate-180" : ""
-          }`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
-      </button>
-
-      {relatedDropdownOpen && (
-        <div className="absolute w-full mt-1 bg-white/5 rounded-lg max-h-60 overflow-y-auto z-50 shadow-lg flex flex-col gap-2 p-2">
-          {relatedTvshows.map((r) => (
-            <div
-              key={r.id}
-              className="cursor-pointer p-2 hover:bg-white/10 rounded-lg flex items-center gap-2"
-              onClick={() => {
-                setSelectedTvshow(r);
-                setVideoUrl(null);
-                setRelatedDropdownOpen(false);
-              }}
-            >
-              <Image
-                src={r.poster_url}
-                alt={r.title}
-                width={60}
-                height={80}
-                className="rounded-lg object-cover"
-              />
-              <span className="text-white">{r.title}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  </div>
-)}
-  </div>
-              {/* Right Side */}
-              <div className="md:w-1/3 flex flex-col gap-4">
                  {/* Season Selector */}
                 <div className="w-full max-w-md relative">
                   <button
@@ -461,7 +357,7 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
                  bg-white/5  border border-white/20
                  hover:bg-white/20 transition-all duration-300 shadow-[0_0_10px_rgba(0,255,255,0.5)]"
     >
-      <Play size={20} className="text-cyan-400 hover:text-cyan-300 transition-colors duration-200" />
+      <PlayCircleIcon size={20} className="text-cyan-400 hover:text-cyan-300 transition-colors duration-200" />
     </button>
   )}
 </div>
@@ -486,28 +382,36 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
   {ep.video_url && (
     <div className="absolute top-1 right-1">
       <button
-        className="text-xs text-cyan-400 px-2 py-1 bg-black/30 backdrop-blur-md rounded-md hover:bg-black/50 flex items-center gap-1 transition"
-        onClick={async () => {
-          try {
-            const response = await fetch(ep.video_url!);
-            if (!response.ok) throw new Error("Failed to fetch video");
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
+    className="text-xs text-cyan-400 px-2 py-1 bg-black/30 backdrop-blur-md rounded-md hover:bg-white/20 flex items-center gap-1 transition"
+    onClick={async () => {
+      try {
+        const videoUrl = ep?.video_url?.replace(/^http:/, "https:"); // force HTTPS
 
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `${ep.name}.mp4`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+        if (!videoUrl) {
+          alert("⚠️ No video URL found for this movie.");
+          return;
+        }
 
-            window.URL.revokeObjectURL(url);
-          } catch (err) {
-            console.error(err);
-            alert("Download failed");
-          }
-        }}
-      >
+        const response = await fetch(videoUrl, { mode: "cors" });
+        if (!response.ok) throw new Error(`Failed to fetch video. Status: ${response.status}`);
+
+        const blob = await response.blob();
+        const objectUrl = window.URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = `${ep?.name || "episode"}.mp4`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        window.URL.revokeObjectURL(objectUrl);
+      } catch (error) {
+        console.error("❌ Download failed:", error);
+        alert("⚠️ Download failed. Check the video link or permissions.");
+      }
+    }}
+  >
         <Download size={14} /> Download
       </button>
     </div>
@@ -522,6 +426,104 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
 
                
               </div>
+ 
+              {/* Right Side */}
+              <div className="md:w-1/3 flex flex-col gap-4">
+
+                {/* Related / More like this - desktop scroll */}
+{relatedTvshows.length > 0 && (
+  <div className="relative mt-6">
+    <h3 className="text-xl font-bold text-white mb-3">
+      More like {selectedTvshow.title}
+    </h3>
+                  {/* Desktop scroll */}
+                    <div className="hidden md:block relative">
+                      {/* <button
+                        onClick={() => scrollRelated("left")}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full"
+                      >
+                        <ChevronLeft size={28} />
+                      </button>
+                      <button
+                        onClick={() => scrollRelated("right")}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full"
+                      >
+                        <ChevronRight size={28} />
+                      </button> */}
+
+                      <div
+                        ref={relatedRef}
+                        className="animate-presence-scroll grid grid-cols-3 flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth relative"
+                      >
+                        {relatedTvshows.map((r) => (
+                          <Image
+                            key={r.id}
+                            src={r.poster_url}
+                            alt={r.title}
+                            width={130}
+                            height={180}
+                            className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
+                            onClick={() => {
+                              setSelectedTvshow(r);
+                              setVideoUrl(null);
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Mobile dropdown */}
+                   <div className="md:hidden relative mt-2">
+  <button
+    className="w-full bg-white/5 text-white p-2 rounded-lg flex justify-between items-center hover:bg-white/10"
+    onClick={() => setRelatedDropdownOpen((prev) => !prev)}
+  >
+        <span>More like this</span>
+        <svg
+          className={`w-4 h-4 transform transition-transform duration-200 ${
+            relatedDropdownOpen ? "rotate-180" : ""
+          }`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </button>
+
+      {relatedDropdownOpen && (
+        <div className="absolute w-full mt-1 bg-white/5 rounded-lg max-h-60 overflow-y-auto z-50 shadow-lg flex flex-col gap-2 p-2">
+          {relatedTvshows.map((r) => (
+            <div
+              key={r.id}
+              className="cursor-pointer p-2 hover:bg-white/10 rounded-lg flex items-center gap-2"
+              onClick={() => {
+                setSelectedTvshow(r);
+                setVideoUrl(null);
+                setRelatedDropdownOpen(false);
+              }}
+            >
+              <Image
+                src={r.poster_url}
+                alt={r.title}
+                width={60}
+                height={80}
+                className="rounded-lg object-cover"
+              />
+              <span className="text-white">{r.title}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+)}
+  </div>
             </div>
 
             {/* Close */}
