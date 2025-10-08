@@ -254,9 +254,7 @@ const LatestMovies = () => {
                       </span>
                     </h2>
                     <p className="text-sm opacity-70">{selectedMovie.year}</p>
-                    <p className="text-cyan-400 font-semibold">
-                      ⭐ {selectedMovie.rating}
-                    </p>
+                   
 
                     <div className="flex flex-row items-center gap-4 mt-4">
                     {selectedMovie.video_url && (
@@ -271,41 +269,17 @@ const LatestMovies = () => {
                     )}
 
 {/* Download button in top-right corner */}
-                 {selectedMovie?.video_url && (
-  <button
+{selectedMovie?.video_url && (
+  <a
+    href={`/api/download-video?url=${encodeURIComponent(
+      selectedMovie.video_url.replace(/^http:/, "https:")
+    )}&name=${encodeURIComponent(selectedMovie.title || "movie")}`}
     className="text-xs text-cyan-400 px-2 py-1 bg-black/30 backdrop-blur-md rounded-md hover:bg-white/20 flex items-center gap-1 transition"
-    onClick={async () => {
-      try {
-        const videoUrl = selectedMovie?.video_url?.replace(/^http:/, "https:"); // force HTTPS
-
-        if (!videoUrl) {
-          alert("⚠️ No video URL found for this movie.");
-          return;
-        }
-
-        const response = await fetch(videoUrl, { mode: "cors" });
-        if (!response.ok) throw new Error(`Failed to fetch video. Status: ${response.status}`);
-
-        const blob = await response.blob();
-        const objectUrl = window.URL.createObjectURL(blob);
-
-        const link = document.createElement("a");
-        link.href = objectUrl;
-        link.download = `${selectedMovie?.title || "movie"}.mp4`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-
-        window.URL.revokeObjectURL(objectUrl);
-      } catch (error) {
-        console.error("❌ Download failed:", error);
-        alert("⚠️ Download failed. Check the video link or permissions.");
-      }
-    }}
   >
     <Download size={14} /> Download
-  </button>
+  </a>
 )}
+
                       </div>
 
                     <Description
@@ -324,18 +298,7 @@ const LatestMovies = () => {
 
                     {/* Desktop scroll */}
                     <div className="hidden md:block relative">
-                      {/* <button
-                        onClick={() => scrollRelated("left")}
-                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full"
-                      >
-                        <ChevronLeft size={28} />
-                      </button>
-                      <button
-                        onClick={() => scrollRelated("right")}
-                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full"
-                      >
-                        <ChevronRight size={28} />
-                      </button> */}
+                     
 
                       <div
                         ref={relatedRef}

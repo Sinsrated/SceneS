@@ -52,7 +52,7 @@ interface Tvshow {
   created_at: string;
 }
 
-const LatestSeries = () => {
+const Aniseries = () => {
   const [tvshowsList, setTvshowsList] = useState<Tvshow[]>([]);
   const [selectedTvshow, setSelectedTvshow] = useState<Tvshow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -152,7 +152,15 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
       });
     }
   };
- 
+  const scrollRelated = (direction: "left" | "right") => {
+    if (relatedRef.current) {
+      const scrollAmount = 200;
+      relatedRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
 
   return (
     <section className="animate-presence-scroll w-full py-8 relative"
@@ -162,28 +170,29 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
 
 
       {/* Desktop scroll buttons with glass/fade 2035 vibe */}
-      {hovering && (
-          <>
-     <button
-            onClick={() => scroll("left")}
-            className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full transition-opacity"
-          >
-            <ChevronLeft size={28} />
-          </button>
-          <button
-            onClick={() => scroll("right")}
-            className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full transition-opacity"
-          >
-            <ChevronRight size={28} />
-          </button>
-    </>
-        )}
-
-    {/* Scrollable container */}
-    <div
-      ref={relatedRef}
-       className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth relative"
-      > {loading
+       <button
+         onClick={() => scroll("left")}
+         className={`hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full text-white transition-opacity duration-300
+           bg-white/10 backdrop-blur-md hover:bg-white/20 hover:scale-105
+           ${hovering ? "opacity-100" : "opacity-0"}`}
+       >
+         <ChevronLeft size={28} />
+       </button>
+     
+       <button
+         onClick={() => scroll("right")}
+         className={`hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full text-white transition-opacity duration-300
+           bg-white/10 backdrop-blur-md hover:bg-white/20 hover:scale-105
+           ${hovering ? "opacity-100" : "opacity-0"}`}
+       >
+         <ChevronRight size={28} />
+       </button>
+     
+       {/* Scrollable movie list */}
+       <div
+         ref={scrollRef}
+         className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth relative"
+       > {loading
           ? Array.from({ length: 10 }).map((_, i) => (
               <div
                 key={i}
@@ -271,112 +280,14 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
                     </span>
                   )}
                 </h2>
-                <p className="text-gray-400 text-sm">{selectedTvshow.release_date}</p>
-                <p className="text-cyan-400 font-semibold">
-                  ⭐ {selectedTvshow.rating}
-                </p>
+                
                  {/* Description */} 
 
                 <Description text={selectedTvshow.overview} limit={180} />
 
-    {/* Related / More like this - desktop scroll */}
-    {relatedTvshows.length > 0 && (
-      <div className="relative mt-6">
-        <h3 className="text-xl font-bold text-white mb-3">More like {selectedTvshow.title}</h3>
+    
 
-    {/* Desktop scroll */}
-                     <div className="hidden md:block relative">
-                       {/* <button
-                         onClick={() => scrollRelated("left")}
-                         className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full"
-                       >
-                         <ChevronLeft size={28} />
-                       </button>
-                       <button
-                         onClick={() => scrollRelated("right")}
-                         className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full"
-                       >
-                         <ChevronRight size={28} />
-                       </button> */}
- 
-                       <div
-                         ref={relatedRef}
-                         className="animate-presence-scroll grid grid-cols-3 flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth relative"
-                       >
-                         {relatedTvshows.map((r) => (
-                           <Image
-                             key={r.id}
-                             src={r.poster_url}
-                             alt={r.title}
-                             width={130}
-                             height={180}
-                             className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
-                             onClick={() => {
-                               setSelectedTvshow(r);
-                               setVideoUrl(null);
-                             }}
-                           />
-                         ))}
-                       </div>
-                     </div>
- 
-                     {/* Mobile dropdown */}
-                    <div className="md:hidden relative mt-2">
-   <button
-     className="w-full bg-white/5 text-white p-2 rounded-lg flex justify-between items-center hover:bg-white/10"
-     onClick={() => setRelatedDropdownOpen((prev) => !prev)}
-   >
-        <span>More like this</span>
-        <svg
-          className={`w-4 h-4 transform transition-transform duration-200 ${
-            relatedDropdownOpen ? "rotate-180" : ""
-          }`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
-      </button>
-
-      {relatedDropdownOpen && (
-        <div className="absolute w-full mt-1 bg-white/5 rounded-lg max-h-60 overflow-y-auto z-50 shadow-lg flex flex-col gap-2 p-2">
-          {relatedTvshows.map((r) => (
-            <div
-              key={r.id}
-              className="cursor-pointer p-2 hover:bg-white/10 rounded-lg flex items-center gap-2"
-              onClick={() => {
-                setSelectedTvshow(r);
-                setVideoUrl(null);
-                setRelatedDropdownOpen(false);
-              }}
-            >
-              <Image
-                src={r.poster_url}
-                alt={r.title}
-                width={60}
-                height={80}
-                className="rounded-lg object-cover"
-              />
-              <span className="text-white">{r.title}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  </div>
-)}
-  </div>
-
-              {/* Right Side */}
-              <div className="md:w-1/3 flex flex-col gap-4">
-                 {/* Season Selector */}
-                <div className="w-full max-w-md relative">
+<div className="w-full max-w-md relative">
                   <button
                     className="w-full bg-white/5 text-white flex justify-between items-center p-2 rounded-lg hover:bg-white/10"
                     onClick={() => setSeasonDropdownOpen((prev) => !prev)}
@@ -473,49 +384,110 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
       )}
     </div>
   {/* Download button in top-right corner */}
-  {ep.video_url && (
-    <div className="absolute top-1 right-1">
-          <button
-    className="text-xs text-cyan-400 px-2 py-1 bg-black/30 backdrop-blur-md rounded-md hover:bg-white/20 flex items-center gap-1 transition"
-    onClick={async () => {
-      try {
-        const videoUrl = ep?.video_url?.replace(/^http:/, "https:"); // force HTTPS
-
-        if (!videoUrl) {
-          alert("⚠️ No video URL found for this movie.");
-          return;
-        }
-
-        const response = await fetch(videoUrl, { mode: "cors" });
-        if (!response.ok) throw new Error(`Failed to fetch video. Status: ${response.status}`);
-
-        const blob = await response.blob();
-        const objectUrl = window.URL.createObjectURL(blob);
-
-        const link = document.createElement("a");
-        link.href = objectUrl;
-        link.download = `${ep?.name || "episode"}.mp4`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-
-        window.URL.revokeObjectURL(objectUrl);
-      } catch (error) {
-        console.error("❌ Download failed:", error);
-        alert("⚠️ Download failed. Check the video link or permissions.");
-      }
-    }}
-  >
-        <Download size={14} /> Download
-      </button>
-    </div>
-  )}
+ {ep.video_url && (
+   <div className="absolute top-1 right-1">
+     <a
+       href={`/api/download-video?url=${encodeURIComponent(
+         ep.video_url.replace(/^http:/, "https:")
+       )}&name=${encodeURIComponent(ep.name || "episode")}`}
+       className="text-xs text-cyan-400 px-2 py-1 bg-black/30 backdrop-blur-md rounded-md hover:bg-white/20 flex items-center gap-1 transition"
+     >
+       <Download size={14} /> Download
+     </a>
+   </div>
+ )}
 
 
     </div>
   </div>
-</div>
+  </div>
  ))}
+
+              {/* Right Side */}
+              <div className="md:w-1/3 flex flex-col gap-4">
+                 {/* Season Selector */}
+                {/* Related / More like this - desktop scroll */}
+    {relatedTvshows.length > 0 && (
+      <div className="relative mt-6">
+        <h3 className="text-xl font-bold text-white mb-3">More like {selectedTvshow.title}</h3>
+   {/* Desktop scroll */}
+                    <div className="hidden md:block relative">
+         
+
+                      <div
+                        ref={relatedRef}
+                        className="animate-presence-scroll grid grid-cols-3 flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth relative"
+                      >
+                        {relatedTvshows.map((r) => (
+                          <Image
+                            key={r.id}
+                            src={r.poster_url}
+                            alt={r.title}
+                            width={130}
+                            height={180}
+                            className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
+                            onClick={() => {
+                              setSelectedTvshow(r);
+                              setVideoUrl(null);
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Mobile dropdown */}
+                   <div className="md:hidden relative mt-2">
+  <button
+    className="w-full bg-white/5 text-white p-2 rounded-lg flex justify-between items-center hover:bg-white/10"
+    onClick={() => setRelatedDropdownOpen((prev) => !prev)}
+  >
+        <span>More like this</span>
+        <svg
+          className={`w-4 h-4 transform transition-transform duration-200 ${
+            relatedDropdownOpen ? "rotate-180" : ""
+          }`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </button>
+
+      {relatedDropdownOpen && (
+   <div className="animate-presence-scroll absolute w-full mt-1 bg-white/5 rounded-lg max-h-60 overflow-y-auto z-50 shadow-lg grid grid-cols-2 gap-2 p-2">
+          {relatedTvshows.map((r) => (
+            <div
+              key={r.id}
+              className="cursor-pointer p-2 hover:bg-white/10 rounded-lg flex items-center gap-2"
+              onClick={() => {
+                setSelectedTvshow(r);
+                setVideoUrl(null);
+                setRelatedDropdownOpen(false);
+              }}
+            >
+              <Image
+                src={r.poster_url}
+                alt={r.title}
+                width={60}
+                height={80}
+                className="rounded-lg object-cover"
+              />
+              <span className="text-white">{r.title}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+)}
+  </div>
+
                 </div>
 
                
@@ -537,4 +509,4 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
   );
 };
 
-export default LatestSeries;
+export default Aniseries;

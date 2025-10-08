@@ -1,40 +1,82 @@
 "use client";
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search as SearchIcon, ArrowLeft, Play, Bookmark, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search as SearchIcon, ArrowLeft, Play, Bookmark, ChevronLeft, ChevronRight, SkipForward, PlayCircleIcon, Download, SkipForwardIcon } from "lucide-react";
 import Image from "next/image";
 import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabaseClient";
 import Description from "./description";
+import VideoModal from "./videoplayer";
 
 export interface Item {
-  id: number;
+   id: number;
+  type: "movie" | "tvshows";
   title: string;
   poster_url: string;
-  description: string;
-  year?: string;
-  genre?: string[];
-  watch_url?: string;
-  trailer_url?: string;
-  episode?: number;
-  seasons?: number;
-  type: "movie" | "series";
+  backdrop_url: string;
+  release_date: string;
+  overview: string;
+  trailers?: string | Trailer[] | { trailers: Trailer[] }; // or whatever your real shape is
+  rating?: number;
+  genres: string[];
+  episodes?: number;
+  seasons?: Season[];
+  created_at: number;
   vj?: string;
-}
-
-interface Season {
-  id: number;
-  season_number: number;
-  episodes: Episode[];
-  vj?: string;
+  status?: string;
+  video_url?: string;
 }
 
 interface Episode {
+  name: string;
+  overview?: string;
+  episode_number: number;
+  runtime?: number;
+  still_path?: string;
+  video_url?: string;
+}
+
+interface Season {
+  name: string;
+  overview?: string;
+  poster_path?: string;
+  episode_count: number;
+  season_number: number;
+  episodes?: Episode[];
+}
+
+interface Trailer {
+  id: string;
+  key: string;
+  name: string;
+  site: string;
+  size?: number;
+  type?: string;
+  official?: boolean;
+  published_at?: string;
+}
+interface TrailerWrapper {
+  trailers: Trailer[];
+}
+
+interface MovieRow {
   id: number;
   title: string;
-  episode_number: number;
-  watch_url?: string;
+  poster_url: string;
+  backdrop_url: string;
+  realease_date: string;
+  overview: string;
+  trailers?: string;
+  rating?: number;
+  genres: string[];
+  created_at: number;
   vj?: string;
+  video_url?: string;
+}
+
+interface TvshowRow extends MovieRow {
+  episodes?: number;
+  seasons?: number;
 }
 
 export default function SearchBar() {
@@ -44,13 +86,25 @@ export default function SearchBar() {
   const [open, setOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [relatedItems, setRelatedItems] = useState<Item[]>([]);
-  const [seriesDetails, setSeriesDetails] = useState<Season[]>([]);
-
+ 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const isMountedRef = useRef(false);
   const portalRef = useRef<HTMLDivElement | null>(null);
   const relatedRef = useRef<HTMLDivElement | null>(null);
   const [isSmall, setIsSmall] = useState(false);
+const [tvshowsDetails, setTvshowsDetails] = useState<Season[]>([]);
+
+     const [videoUrl, setVideoUrl] = useState<string | null>(null);
+      const [currentTrailerIndex, setCurrentTrailerIndex] = useState(0);
+      const [seasonDropdownOpen, setSeasonDropdownOpen] = useState(false);
+    const [relatedDropdownOpen, setRelatedDropdownOpen] = useState(false);
+     const scrollRef = useRef<HTMLDivElement>(null);
+     const [expandedSeason, setExpandedSeason] = useState<number | null>(null);
+
+     const [hovering, setHovering] = useState(false);
+     const [showSkipButton, setShowSkipButton] = useState(false);
+    const [skipTimeout, setSkipTimeout] = useState<NodeJS.Timeout | null>(null);
+    const iframeWrapperRef = useRef<HTMLDivElement>(null);
 
   // create portal root on mount
   useEffect(() => {
@@ -76,20 +130,47 @@ export default function SearchBar() {
   }, []);
 
   // normalize helper
-  const normalize = (row: Record<string, unknown>, type: "movie" | "series"): Item => ({
-    id: Number(row.id),
-    title: String(row.title),
+ const normalize = (row: Record<string, unknown>, type: "movie" | "tvshows"): Item => {
+  let parsedTrailers: TrailerWrapper | undefined = undefined;
+
+  try {
+    const rawTrailers = row.trailers;
+
+    if (typeof rawTrailers === "string") {
+      const parsed = JSON.parse(rawTrailers);
+      if (parsed && typeof parsed === "object" && "trailers" in parsed) {
+        parsedTrailers = parsed as TrailerWrapper;
+      }
+    } else if (typeof rawTrailers === "object" && rawTrailers !== null && "trailers" in rawTrailers) {
+      parsedTrailers = rawTrailers as TrailerWrapper;
+    }
+  } catch (e) {
+    console.error("Failed to parse trailers:", e);
+  }
+
+  return {
+    id: Number.isFinite(Number(row.id)) ? Number(row.id) : Date.now() + Math.floor(Math.random() * 1000),
+    title: String(row.title ?? "Untitled"),
     poster_url: String(row.poster_url ?? "/placeholder.png"),
-    description: String(row.description ?? "No description available"),
-    year: row.year ? String(row.year) : undefined,
+    backdrop_url: String(row.backdrop_url ?? "/placeholder.png"),
+    overview: String(row.overview ?? "No overview available"),
+    release_date: String(row.release_date ?? "Unknown"),
     vj: row.vj ? String(row.vj) : undefined,
-    genre: Array.isArray(row.genre) ? (row.genre as string[]) : [],
-    watch_url: row.watch_url ? String(row.watch_url) : undefined,
-    trailer_url: row.trailer_url ? String(row.trailer_url) : undefined,
-    episode: row.episode ? Number(row.episode) : undefined,
-    seasons: row.seasons ? Number(row.seasons) : undefined,
+    genres: Array.isArray(row.genres) ? (row.genres as string[]) : [],
+    video_url: row.video_url ? String(row.video_url) : undefined,
+    trailers: parsedTrailers,
+    rating: row.rating ? Number(row.rating) : undefined,
+    episodes: row.episodes ? Number(row.episodes) : undefined,
+    seasons: Array.isArray(row.seasons) ? (row.seasons as Season[]) : undefined,
+    created_at: row.created_at ? Number(row.created_at) : Date.now(),
+    status: row.status ? String(row.status) : undefined,
     type,
-  });
+  };
+};
+
+
+
+
 
   // fetch all
   const fetchAll = useCallback(async () => {
@@ -97,12 +178,12 @@ export default function SearchBar() {
     try {
       const [moviesRes, seriesRes] = await Promise.all([
         supabase.from("movies").select("*").order("title"),
-        supabase.from("series").select("*").order("title"),
+        supabase.from("tvshows").select("*").order("title"),
       ]);
 
       const formatted: Item[] = [
         ...(moviesRes.data?.map((m) => normalize(m, "movie")) ?? []),
-        ...(seriesRes.data?.map((s) => normalize(s, "series")) ?? []),
+        ...(seriesRes.data?.map((s) => normalize(s, "tvshows")) ?? []),
       ];
       formatted.sort((a, b) => a.title.localeCompare(b.title));
       setResults(formatted);
@@ -113,62 +194,68 @@ export default function SearchBar() {
     }
   }, []);
 
-  const scrollRelated = (direction: "left" | "right") => {
-  if (!relatedRef.current) return;
-  const container = relatedRef.current;
-  const scrollAmount = container.offsetWidth / 2; // scroll half container width
-  if (direction === "left") {
-    container.scrollBy({ left: -scrollAmount, behavior: "smooth" });
-  } else {
-    container.scrollBy({ left: scrollAmount, behavior: "smooth" });
-  }
-};
+ 
 
   // open suggestion (loads series details if needed)
-  const openSuggestion = useCallback(
-    async (s: Item) => {
-      setSelectedItem(s);
-      setOpen(false);
-      const related = results.filter((r) => r.type === s.type && r.id !== s.id).slice(0, 10);
-      setRelatedItems(related);
+const openSuggestion = useCallback(
+  async (s: Item) => {
+    setSelectedItem(s);
+    setOpen(false);
 
-      if (s.type === "series") {
-        const { data: seasonsData } = await supabase
-          .from("seasons")
-          .select("id, season_number")
-          .eq("series_id", s.id)
-          .order("season_number");
+    const related = results.filter((r) => r.type === s.type && r.id !== s.id).slice(0, 10);
+    setRelatedItems(related);
 
-        if (seasonsData) {
-          const seasonsWithEpisodes: Season[] = [];
-          for (const season of seasonsData) {
-            const { data: episodesData } = await supabase
-              .from("episodes")
-              .select("id, title, episode_number, watch_url")
-              .eq("season_id", season.id)
-              .order("episode_number");
+    if (s.type === "tvshows") {
+      const { data: seasonsData } = await supabase
+        .from("seasons")
+        .select("id, name, overview, poster_path, season_number")
+        .eq("tvshows_id", s.id)
+        .order("season_number");
 
-            seasonsWithEpisodes.push({
-              id: Number(season.id),
-              season_number: Number(season.season_number),
-              episodes:
-                episodesData?.map((ep) => ({
-                  id: Number(ep.id),
-                  title: String(ep.title),
-                  episode_number: Number(ep.episode_number),
-                  watch_url: ep.watch_url ? String(ep.watch_url) : undefined,
-                })) ?? [],
-            });
-          }
-          setSeriesDetails(seasonsWithEpisodes);
+      if (seasonsData) {
+        const seasonsWithEpisodes: Season[] = [];
+        for (const season of seasonsData) {
+          const { data: episodesData } = await supabase
+            .from("episodes")
+            .select("id, name, episode_number, runtime, still_path, video_url")
+            .eq("season_id", season.id)
+            .order("episode_number");
+
+          seasonsWithEpisodes.push({
+            name: season.name ? String(season.name) : `Season ${season.season_number}`,
+            overview: season.overview ? String(season.overview) : undefined,
+            poster_path: season.poster_path ? String(season.poster_path) : undefined,
+            season_number: Number(season.season_number),
+            episode_count: episodesData?.length ?? 0,
+            episodes:
+              episodesData?.map((ep) => ({
+                id: Number(ep.id),
+                name: ep.name ? String(ep.name) : `Episode ${ep.episode_number}`,
+                episode_number: Number(ep.episode_number),
+                runtime: ep.runtime ? Number(ep.runtime) : undefined,
+                still_path: ep.still_path ? String(ep.still_path) : undefined,
+                video_url: ep.video_url ? String(ep.video_url) : undefined,
+              })) ?? [],
+          });
         }
-      } else {
-        setSeriesDetails([]);
+        setTvshowsDetails(seasonsWithEpisodes);
       }
-    },
-    [results]
-  );
+    } else {
+      setTvshowsDetails([]);
+    }
+  },
+  [results]
+);
 
+
+  
+  const handleInteraction = () => {
+  setShowSkipButton(true);
+  if (skipTimeout) clearTimeout(skipTimeout);
+
+  const timeout = setTimeout(() => setShowSkipButton(false), 2000);
+  setSkipTimeout(timeout);
+};
   // search effect (debounced)
   useEffect(() => {
     let mounted = true;
@@ -181,12 +268,12 @@ export default function SearchBar() {
       try {
         const [moviesRes, seriesRes] = await Promise.all([
           supabase.from("movies").select("*").ilike("title", `%${query}%`).limit(10),
-          supabase.from("series").select("*").ilike("title", `%${query}%`).limit(10),
+          supabase.from("tvshows").select("*").ilike("title", `%${query}%`).limit(10),
         ]);
 
         const formatted: Item[] = [
           ...(moviesRes.data?.map((m) => normalize(m, "movie")) ?? []),
-          ...(seriesRes.data?.map((s) => normalize(s, "series")) ?? []),
+          ...(seriesRes.data?.map((s) => normalize(s, "tvshows")) ?? []),
         ];
         if (mounted) {
           formatted.sort((a, b) => a.title.localeCompare(b.title));
@@ -204,6 +291,12 @@ export default function SearchBar() {
       clearTimeout(t);
     };
   }, [query, fetchAll]);
+
+       useEffect(() => {
+    if (selectedItem?.type === "movie") {
+      console.log("Selected movie video_url:", selectedItem.video_url);
+    }
+  }, [selectedItem]);
 
   // keyboard shortcuts
   useEffect(() => {
@@ -225,6 +318,39 @@ export default function SearchBar() {
     return content;
   };
 
+     const youtubeKeys: string[] = React.useMemo(() => {
+           if (!selectedItem?.trailers) return [];
+       
+           try {
+             let trailersObj;
+       
+             if (typeof selectedItem.trailers === "string") {
+               trailersObj = JSON.parse(selectedItem.trailers);
+             } else {
+               trailersObj = selectedItem.trailers;
+             }
+       
+             const trailerArray: Trailer[] = trailersObj?.trailers ?? [];
+       
+             return trailerArray
+               .filter((t) => t.site === "YouTube" && t.key)
+               .map((t) => t.key);
+           } catch (err) {
+             console.error("Failed to parse trailers JSON:", err);
+             return [];
+           }
+         }, [selectedItem]);
+
+
+      
+          
+      
+        const nextTrailer = () => {
+          if (youtubeKeys.length === 0) return;
+          setCurrentTrailerIndex((prev) => (prev + 1) % youtubeKeys.length);
+        };
+    
+      
   // when opening, focus input
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 50);
@@ -299,140 +425,431 @@ export default function SearchBar() {
   );
 
   const selectedOverlay = (
-    <AnimatePresence>
-      {selectedItem && (
-        <motion.div
-          key="selected-item"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-lg overflow-y-auto scrollbar-hide p-4"
+   <AnimatePresence>
+  {selectedItem && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className="animate-presence-scroll fixed inset-0 z-[9999] bg-black  overflow-y-auto p-4 md:p-8"
+    >
+     
+        {/* CLOSE BUTTON */}
+        <button
+          onClick={() => setSelectedItem(null)}
+          className="absolute top-2 right-2 text-white text-2xl z-50   "
         >
-          <div className="max-w-5xl mx-auto bg-white/10 rounded-2xl p-6 flex flex-col md:flex-row gap-6 relative mt-10 mb-10 shadow-2xl">
-            <Image
-              src={selectedItem.poster_url || "/placeholder.png"}
-              alt={selectedItem.title}
-              width={300}
-              height={450}
-              className="rounded-xl object-cover"
+          ✕
+        </button>
+
+{selectedItem?.type === "tvshows" && (
+  <div className="flex flex-col md:flex-row gap-8 max-w-1xl mx-auto">
+    {/* Left Side: Poster / Trailer */}
+    <div className="md:w-2/3 space-y-6">
+      <div
+        ref={iframeWrapperRef}
+        className="relative w-full top-5 aspect-video rounded-xl overflow-hidden shadow-lg"
+        onMouseMove={handleInteraction}
+        onTouchStart={handleInteraction}
+      >
+        {videoUrl ? (
+          <VideoModal url={videoUrl} onClose={() => setVideoUrl(null)} />
+        ) : youtubeKeys.length > 0 ? (
+          <iframe
+            key={youtubeKeys[currentTrailerIndex]}
+            src={`https://www.youtube.com/embed/${youtubeKeys[currentTrailerIndex]}?autoplay=0&controls=1&rel=0&modestbranding=1`}
+            title="YouTube trailer"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="w-full h-full"
+          />
+        ) : (
+          <p className="text-white text-center pt-10">No trailer available</p>
+        )}
+
+        {youtubeKeys.length > 1 && (
+          <button
+            onClick={nextTrailer}
+            className={`absolute top-1/2 right-4 -translate-y-1/2 p-2 rounded-full text-white backdrop-blur-md bg-white/10 border border-white/20 shadow-lg transition-opacity duration-300 ${
+              showSkipButton ? "opacity-100" : "opacity-0"
+            } hover:bg-white/20`}
+          >
+            <SkipForward size={26} />
+          </button>
+        )}
+      </div>
+
+      <h2 className="text-2xl font-bold text-white">
+        {selectedItem.title}{" "}
+        {selectedItem.vj && (
+          <span className="text-sm text-gray-400 ml-2">{selectedItem.vj}</span>
+        )}
+      </h2>
+
+
+      <Description text={selectedItem.overview} limit={180} />
+
+      {/* Season Selector */}
+      <div className="w-full max-w-md relative">
+        <button
+          className="w-full bg-white/5 text-white flex justify-between items-center p-2 rounded-lg hover:bg-white/10"
+          onClick={() => setSeasonDropdownOpen((prev) => !prev)}
+        >
+          <span>
+            {selectedItem.seasons?.find(
+              (s) => s.season_number === expandedSeason
+            )?.name || "Select Season"}
+          </span>
+          <svg
+            className={`w-4 h-4 transform transition-transform duration-200 ${
+              seasonDropdownOpen ? "rotate-180" : ""
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
             />
-            <div className="flex flex-col justify-between flex-1">
-              <div>
-                <h2 className="text-1x3 font-bold text-white mb-2">{selectedItem.title}
-                 <span className="text-sm text-gray-400 ml-2"> {selectedItem.vj}</span>
-                </h2>
-                 <p className="text-sm text-gray-300 mb-2">
-                  {selectedItem.year} • {selectedItem.genre?.join(", ")}
-                </p>
+          </svg>
+        </button>
+
+        {seasonDropdownOpen && (
+          <div className="absolute w-full mt-1 bg-white/5 rounded-lg max-h-60 overflow-y-auto z-50 shadow-lg">
+            {selectedItem.seasons?.map((season) => (
+              <div
+                key={season.season_number}
+                className={`cursor-pointer p-2 hover:bg-white/30 ${
+                  expandedSeason === season.season_number ? "bg-white/30" : ""
+                }`}
+                onClick={() => {
+                  setExpandedSeason(season.season_number);
+                  setSeasonDropdownOpen(false);
+                }}
+              >
+                {season.name}
               </div>
-                {selectedItem.watch_url && (
-                  <button
-                    onClick={() => window.open(selectedItem.watch_url, "_blank")}
-                    className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition mb-4"
-                  >
-                    <Play size={18} /> Watch
-                  </button>
-                )}
+            ))}
+          </div>
+        )}
+      </div>
 
-               
-
-              {selectedItem.type === "series" && seriesDetails.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="text-xl font-bold text-white mb-3">Seasons</h3>
-                  {seriesDetails.map((season) => (
-                    <div key={season.id} className="mb-4">
-                      <h4 className="text-lg font-semibold text-red-400 mb-2">Season {season.season_number}</h4>
-                      <ul className="space-y-2">
-                        {season.episodes.map((ep) => (
-                          <li key={ep.id} className="flex items-center justify-between bg-white/5 px-3 py-2 rounded-lg">
-                            <span className="text-white">Ep {ep.episode_number}: {ep.title}</span>
-                            {ep.watch_url && (
-                              <button
-                                onClick={() => window.open(ep.watch_url!, "_blank")}
-                                className="text-sm px-3 py-1 bg-red-500 rounded-lg text-white"
-                              >
-                                Watch
-                              </button>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
+      {/* Episodes */}
+      <div className="space-y-3 mt-4">
+        {selectedItem.seasons
+          ?.find((s) => s.season_number === expandedSeason)
+          ?.episodes?.map((ep, i) => (
+            <div key={i} className="bg-black/30 rounded-lg p-2 flex items-start gap-3 relative">
+              {ep.still_path && (
+                <div className="relative w-[100px] h-[60px] flex-shrink-0">
+                  <Image
+                    src={ep.still_path}
+                    alt={ep.name}
+                    fill
+                    className="rounded-md object-cover"
+                  />
+                  {ep.video_url && (
+                    <button
+                      onClick={() => setVideoUrl(ep.video_url!)}
+                      className="absolute inset-0 flex items-center justify-center rounded-md
+                        bg-white/5 border border-white/20
+                        hover:bg-white/20 transition-all duration-300 shadow-[0_0_10px_rgba(0,255,255,0.5)]"
+                    >
+                      <PlayCircleIcon
+                        size={20}
+                        className="text-cyan-400 hover:text-cyan-300 transition-colors duration-200"
+                      />
+                    </button>
+                  )}
                 </div>
               )}
-
-              <div className="flex gap-4 mb-6 mt-4">
-                {selectedItem.trailer_url && (
-                  <a
-                    href={selectedItem.trailer_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition"
-                  >
-                    <Play size={18} /> Trailer
-                  </a>
-                )}
-                <button className="flex items-center gap-2 bg-white/20 text-white px-6 py-2 rounded-xl font-semibold shadow hover:scale-105 transition">
-                  <Bookmark size={18} /> Save
-                </button>
-              </div>
-               <div className="flex-1 justify-between">
-                                      <Description text={selectedItem.description} limit={180} />
-                                    </div>
-
-              {/* More like this */}
-{relatedItems.length > 0 && (
-  <div className="relative mt-6">
-    <h3 className="text-xl font-bold text-white mb-3">
-      More like {selectedItem.title}
-    </h3>
-
-    {/* Scroll buttons for desktop */}
-    <button
-      onClick={() => scrollRelated("left")}
-      className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
-    >
-      <ChevronLeft size={28} />
-    </button>
-    <button
-      onClick={() => scrollRelated("right")}
-      className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full"
-    >
-      <ChevronRight size={28} />
-    </button>
-
-    {/* Scrollable container */}
-    <div
-      ref={relatedRef}
-      className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x"
-    > {relatedItems.map((i) => (
-                      <div key={`${i.type}-${i.id}`} className="flex-shrink-0 snap-start">
-                        <Image
-                          src={i.poster_url || "/placeholder.png"}
-                          alt={i.title}
-                          width={120}
-                          height={180}
-                          className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
-                          onClick={() => openSuggestion(i)}
-                        />
-                      </div>
-                    ))}
-                  </div>
+              <div className="flex-1 flex flex-col justify-between">
+                <div>
+                  <p className="text-white font-medium">
+                    Ep {ep.episode_number}: {ep.name}
+                  </p>
+                  {ep.runtime && (
+                    <p className="text-xs text-gray-400">{ep.runtime} min</p>
+                  )}
+                  {ep.overview && (
+                    <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+                      {ep.overview}
+                    </p>
+                  )}
                 </div>
+{ep.video_url && (
+  <div className="absolute top-1 right-1">
+    <a
+      href={`/api/download-video?url=${encodeURIComponent(
+        ep.video_url.replace(/^http:/, "https:")
+      )}&name=${encodeURIComponent(ep.name || "episode")}`}
+      className="text-xs text-cyan-400 px-2 py-1 bg-black/30 backdrop-blur-md rounded-md hover:bg-white/20 flex items-center gap-1 transition"
+    >
+      <Download size={14} /> Download
+    </a>
+  </div>
+)}
+              </div>
+            </div>
+          ))}
+      </div>
+    </div>
+
+    {/* Right Side: Related */}
+       {/* Related / More like this - desktop scroll */}
+       <div className="md:w-1/3 flex flex-col gap-4">
+       {relatedItems.length > 0 && (
+         <div className="relative mt-6">
+           <h3 className="text-xl font-bold text-white mb-3">More like {selectedItem.title}</h3>
+      {/* Desktop scroll */}
+                       <div className="hidden md:block relative">
+            
+   
+                         <div
+                           ref={relatedRef}
+                           className="animate-presence-scroll grid grid-cols-3 flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth relative"
+                         >
+                           {relatedItems.map((r) => (
+                             <Image
+                               key={r.id}
+                               src={r.poster_url}
+                               alt={r.title}
+                               width={130}
+                               height={180}
+                               className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
+                               onClick={() => {
+                                 setSelectedItem(r);
+                                 setVideoUrl(null);
+                               }}
+                             />
+                           ))}
+                         </div>
+                       </div>
+   
+                       {/* Mobile dropdown */}
+                      <div className="md:hidden relative mt-2">
+     <button
+       className="w-full bg-white/5 text-white p-2 rounded-lg flex justify-between items-center hover:bg-white/10"
+       onClick={() => setRelatedDropdownOpen((prev) => !prev)}
+     >
+           <span>More like this</span>
+           <svg
+             className={`w-4 h-4 transform transition-transform duration-200 ${
+               relatedDropdownOpen ? "rotate-180" : ""
+             }`}
+             fill="none"
+             stroke="currentColor"
+             viewBox="0 0 24 24"
+           >
+             <path
+               strokeLinecap="round"
+               strokeLinejoin="round"
+               strokeWidth={2}
+               d="M19 9l-7 7-7-7"
+             />
+           </svg>
+         </button>
+   
+         {relatedDropdownOpen && (
+           <div className="absolute w-full mt-1 bg-white/5 rounded-lg max-h-60 overflow-y-auto z-50 shadow-lg flex flex-col gap-2 p-2">
+             {relatedItems.map((r) => (
+               <div
+                 key={r.id}
+                 className="cursor-pointer p-2 hover:bg-white/10 rounded-lg flex items-center gap-2"
+                 onClick={() => {
+                   setSelectedItem(r);
+                   setVideoUrl(null);
+                   setRelatedDropdownOpen(false);
+                 }}
+               >
+                 <Image
+                   src={r.poster_url}
+                   alt={r.title}
+                   width={60}
+                   height={80}
+                   className="rounded-lg object-cover"
+                 />
+                 <span className="text-white">{r.title}</span>
+               </div>
+             ))}
+           </div>
+         )}
+       </div>
+     </div>
+   )}
+   </div>  
+  </div>
+)}:
+
+{selectedItem?.type === "movie" && (
+          (
+          /* ===================== MOVIE EXPANDED ===================== */
+          <div className="flex flex-col md:flex-row gap-8 max-w-1xl mx-auto ">
+                {/* Video Section */}
+                <div className="md:w-2/3 space-y-6">
+                  <div
+                    ref={iframeWrapperRef}
+                    className="relative w-full top-5 aspect-video rounded-xl overflow-hidden shadow-lg"
+                    onMouseMove={handleInteraction}
+                    onTouchStart={handleInteraction}
+                  >
+                    {videoUrl ? (
+                      <VideoModal
+                        url={videoUrl}
+                        onClose={() => setVideoUrl(null)}
+                      />
+                    ) : youtubeKeys.length > 0 ? (
+                      <iframe
+                        key={youtubeKeys[currentTrailerIndex]}
+                        src={`https://www.youtube.com/embed/${youtubeKeys[currentTrailerIndex]}?autoplay=0&controls=1&rel=0&modestbranding=1`}
+                        title="YouTube trailer"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="w-full h-full"
+                      />
+                    ) : (
+                      <p className="text-white text-center pt-10">
+                        No trailer available
+                      </p>
+                    )}
+
+                    {youtubeKeys.length > 1 && (
+                      <button
+                        onClick={nextTrailer}
+                        className={`absolute top-1/2 right-4 -translate-y-1/2 p-2 rounded-full text-white backdrop-blur-md bg-white/10 border border-white/20 shadow-lg transition-opacity duration-300 ${
+                          showSkipButton ? "opacity-100" : "opacity-0"
+                        } hover:bg-white/20`}
+                      >
+                        <SkipForwardIcon size={26} />
+                      </button>
+                    )}
+                  </div>
+              {/* Info */}
+              <h2 className="text-3xl font-bold text-white">
+                {selectedItem.title}
+                <span className="ml-2 text-gray-400 text-base">{selectedItem.vj}</span>
+              </h2>
+              <p className="text-gray-300 text-sm mb-3">
+                {selectedItem.release_date} • {selectedItem.genres.join(", ")}
+              </p>
+
+                    <div className="flex flex-row items-center gap-4 mt-4">
+                    {selectedItem.video_url && (
+                      <button
+                        onClick={() =>
+                          setVideoUrl(selectedItem.video_url as string)
+                        }
+                        className="flex items-center gap-2   px-4 py-2 rounded-xl text-cyan-400 hover:bg-white/20 "
+                      >
+                        <PlayCircleIcon size={20} /> Play
+                      </button>
+                    )}
+
+{/* Download button in top-right corner */}
+{selectedItem?.video_url && (
+  <a
+    href={`/api/download-video?url=${encodeURIComponent(
+      selectedItem.video_url.replace(/^http:/, "https:")
+    )}&name=${encodeURIComponent(selectedItem.title || "movie")}`}
+    className="text-xs text-cyan-400 px-2 py-1 bg-black/30 backdrop-blur-md rounded-md hover:bg-white/20 flex items-center gap-1 transition"
+  >
+    <Download size={14} /> Download
+  </a>
+)}
+
+               </div>     
+
+                    <Description
+                      text={selectedItem.overview}
+                      limit={180}
+                    />
+                    </div>
+                  
+                
+            <div className="md:w-1/3 flex flex-col gap-4">
+              {/* Related Movies */}
+                {relatedItems.length > 0 && (
+                  <div className="flex-1 mt-6">
+                    <h3 className="text-xl font-bold text-white mb-3">
+                      More like {selectedItem.title}
+                    </h3>
+
+                    {/* Desktop scroll */}
+                    <div className="hidden md:block relative">
+                     
+
+                      <div
+                        ref={relatedRef}
+                        className="animate-presence-scroll grid grid-cols-3 flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth relative"
+                      >
+                        {relatedItems.map((i) => (
+                                                  <Image
+                                                    key={i.id}
+                                                    src={i.poster_url}
+                                                    alt={i.title}
+                                                    width={130}
+                                                    height={180}
+                                                    className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
+                                                    onClick={() => {
+                                                      setSelectedItem(i);
+                                                      setVideoUrl(null);
+                                                    }}
+                                                  />
+                                                ))}
+                                              </div>
+                                            </div>
+                                             {/* Mobile dropdown */}
+                                                               <div className="md:hidden relative mt-2">
+                                              <button
+                                                className="w-full bg-white/5 text-white p-2 rounded-lg flex justify-between items-center hover:bg-white/10"
+                                                onClick={() => setRelatedDropdownOpen((prev) => !prev)}
+                                              >
+                                                <span>More like this</span>
+                                                <ChevronRight
+                                                  className={`w-4 h-4 transform transition-transform duration-200 ${
+                                                    relatedDropdownOpen ? "rotate-90" : ""
+                                                  }`}
+                                                />
+                                              </button>
+                                            
+                                              {relatedDropdownOpen && (
+                                                <div className="animate-presence-scroll absolute w-full mt-1 bg-white/5 rounded-lg max-h-60 overflow-y-auto z-50 shadow-lg grid grid-cols-2 gap-2 p-2">
+                                                  {relatedItems.map((i) => (
+                                                    <div key={i.id} className="flex justify-center">
+                                                      <Image
+                                                        src={i.poster_url}
+                                                        alt={i.title}
+                                                        width={120}
+                                                        height={180}
+                                                        className="rounded-lg object-cover cursor-pointer hover:scale-105 transition"
+                                                        onClick={() => setSelectedItem(i)}
+                                                      />
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              )}
+                                            </div>
+                                              </div>
+                                            
+                                                            
               )}
             </div>
-
-            <button
-              className="absolute top-4 right-4 text-white text-2xl"
-              onClick={() => setSelectedItem(null)}
-            >
-              ✕
-            </button>
+            
           </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          
+        ))}
+        
+      
+    </motion.div>
+  )}
+</AnimatePresence>
+
   );
 
   return (

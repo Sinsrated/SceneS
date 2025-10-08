@@ -274,10 +274,7 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
                     </span>
                   )}
                 </h2>
-                <p className="text-gray-400 text-sm">{selectedTvshow.release_date}</p>
-                <p className="text-cyan-400 font-semibold">
-                  ⭐ {selectedTvshow.rating}
-                </p>
+                
                  {/* Description */} 
 
                 <Description text={selectedTvshow.overview} limit={180} />
@@ -379,43 +376,18 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
       )}
     </div>
   {/* Download button in top-right corner */}
-  {ep.video_url && (
-    <div className="absolute top-1 right-1">
-      <button
-    className="text-xs text-cyan-400 px-2 py-1 bg-black/30 backdrop-blur-md rounded-md hover:bg-white/20 flex items-center gap-1 transition"
-    onClick={async () => {
-      try {
-        const videoUrl = ep?.video_url?.replace(/^http:/, "https:"); // force HTTPS
-
-        if (!videoUrl) {
-          alert("⚠️ No video URL found for this movie.");
-          return;
-        }
-
-        const response = await fetch(videoUrl, { mode: "cors" });
-        if (!response.ok) throw new Error(`Failed to fetch video. Status: ${response.status}`);
-
-        const blob = await response.blob();
-        const objectUrl = window.URL.createObjectURL(blob);
-
-        const link = document.createElement("a");
-        link.href = objectUrl;
-        link.download = `${ep?.name || "episode"}.mp4`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-
-        window.URL.revokeObjectURL(objectUrl);
-      } catch (error) {
-        console.error("❌ Download failed:", error);
-        alert("⚠️ Download failed. Check the video link or permissions.");
-      }
-    }}
-  >
-        <Download size={14} /> Download
-      </button>
-    </div>
-  )}
+{ep.video_url && (
+  <div className="absolute top-1 right-1">
+    <a
+      href={`/api/download-video?url=${encodeURIComponent(
+        ep.video_url.replace(/^http:/, "https:")
+      )}&name=${encodeURIComponent(ep.name || "episode")}`}
+      className="text-xs text-cyan-400 px-2 py-1 bg-black/30 backdrop-blur-md rounded-md hover:bg-white/20 flex items-center gap-1 transition"
+    >
+      <Download size={14} /> Download
+    </a>
+  </div>
+)}
 
 
     </div>
@@ -438,19 +410,7 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
     </h3>
                   {/* Desktop scroll */}
                     <div className="hidden md:block relative">
-                      {/* <button
-                        onClick={() => scrollRelated("left")}
-                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full"
-                      >
-                        <ChevronLeft size={28} />
-                      </button>
-                      <button
-                        onClick={() => scrollRelated("right")}
-                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full"
-                      >
-                        <ChevronRight size={28} />
-                      </button> */}
-
+                      
                       <div
                         ref={relatedRef}
                         className="animate-presence-scroll grid grid-cols-3 flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth relative"
@@ -497,7 +457,7 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
       </button>
 
       {relatedDropdownOpen && (
-        <div className="absolute w-full mt-1 bg-white/5 rounded-lg max-h-60 overflow-y-auto z-50 shadow-lg flex flex-col gap-2 p-2">
+    <div className="animate-presence-scroll absolute w-full mt-1 bg-white/5 rounded-lg max-h-60 overflow-y-auto z-50 shadow-lg grid grid-cols-2 gap-2 p-2">
           {relatedTvshows.map((r) => (
             <div
               key={r.id}
