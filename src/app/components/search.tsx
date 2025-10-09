@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabaseClient";
 import Description from "./description";
 import VideoModal from "./videoplayer";
+import Cast from "./cast";
 
 export interface Item {
    id: number;
@@ -168,6 +169,7 @@ const [tvshowsDetails, setTvshowsDetails] = useState<Season[]>([]);
   };
 };
 
+  
 
 
 
@@ -603,6 +605,8 @@ const openSuggestion = useCallback(
     {/* Right Side: Related */}
        {/* Related / More like this - desktop scroll */}
        <div className="md:w-1/3 flex flex-col gap-4">
+        <Cast itemId={selectedItem.id} type={selectedItem.type} />
+                          
        {relatedItems.length > 0 && (
          <div className="relative mt-6">
            <h3 className="text-xl font-bold text-white mb-3">More like {selectedItem.title}</h3>
@@ -773,6 +777,8 @@ const openSuggestion = useCallback(
                   
                 
             <div className="md:w-1/3 flex flex-col gap-4">
+             <Cast itemId={selectedItem.id} type={selectedItem.type} />
+                               
               {/* Related Movies */}
                 {relatedItems.length > 0 && (
                   <div className="flex-1 mt-6">

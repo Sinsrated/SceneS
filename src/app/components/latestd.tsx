@@ -7,6 +7,7 @@ import { Play, SkipForward, Download, ChevronLeft, ChevronRight } from "lucide-r
 import { supabase } from "../lib/supabaseClient";
 import Description from "../components/description";
 import VideoModal from "./videoplayer";
+import Cast from "./cast";
 
 interface Episode {
   name: string;
@@ -152,15 +153,7 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
       });
     }
   };
-  const scrollRelated = (direction: "left" | "right") => {
-    if (relatedRef.current) {
-      const scrollAmount = 200;
-      relatedRef.current.scrollBy({
-        left: direction === "left" ? -scrollAmount : scrollAmount,
-        behavior: "smooth",
-      });
-    }
-  };
+  
 
   return (
     <section className="animate-presence-scroll w-full py-8 relative"
@@ -405,6 +398,8 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
 
               {/* Right Side */}
               <div className="md:w-1/3 flex flex-col gap-4">
+              <Cast itemId={selectedTvshow.id} type="tvshows" />
+
                  {/* Season Selector */}
                 {/* Related / More like this - desktop scroll */}
     {relatedTvshows.length > 0 && (

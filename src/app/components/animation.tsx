@@ -14,6 +14,7 @@ import Header from "../components/Header";
 import { supabase } from "../lib/supabaseClient";
 import Description from "./description";
 import VideoModal from "./videoplayer";
+import Cast from "./cast";
 
 interface Movie {
   id: number;
@@ -300,7 +301,8 @@ const Animation = () => {
                     />
                   </div>
                 </div>
-
+<div className="md:w-1/3 flex flex-col gap-4">
+<Cast itemId={selectedMovie.id} type="movie"/>
                 {/* Related Movies */}
                 {relatedMovies.length > 0 && (
                   <div className="flex-1 mt-6">
@@ -310,18 +312,7 @@ const Animation = () => {
 
                     {/* Desktop scroll */}
                     <div className="hidden md:block relative">
-                      {/* <button
-                        onClick={() => scrollRelated("left")}
-                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full"
-                      >
-                        <ChevronLeft size={28} />
-                      </button>
-                      <button
-                        onClick={() => scrollRelated("right")}
-                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full"
-                      >
-                        <ChevronRight size={28} />
-                      </button> */}
+                   
 
                       <div
                         ref={relatedRef}
@@ -377,6 +368,7 @@ const Animation = () => {
 </div>
                   </div>
                 )}
+                </div>
                 {/* Close Button */}
                 <button
                   className="absolute top-2 right-2 text-white text-2xl"

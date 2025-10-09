@@ -5,12 +5,9 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { PlayCircleIcon, Bookmark, SkipForward, Download, ChevronLeft, ChevronRight, SkipForwardIcon } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
-import { create } from "domain";
 import Description from "./description";  
-import { release } from "os";
-import { stat } from "fs";
-import { i } from "framer-motion/client";
 import VideoModal from "./videoplayer";
+import Cast from "./cast";
 
 interface Item {
   id: number;
@@ -29,6 +26,7 @@ interface Item {
   vj?: string;
   status?: string;
   video_url?: string;
+  cast?: string[]
 }
 
 interface Episode {
@@ -75,6 +73,7 @@ interface MovieRow {
   created_at: number;
   vj?: string;
   video_url?: string;
+  
 }
 
 interface TvshowRow extends MovieRow {
@@ -220,15 +219,7 @@ const handleInteraction = () => {
         if (youtubeKeys.length === 0) return;
         setCurrentTrailerIndex((prev) => (prev + 1) % youtubeKeys.length);
       };
-       const scroll = (direction: "left" | "right") => {
-        if (scrollRef.current) {
-          const scrollAmount = 300;
-          scrollRef.current.scrollBy({
-            left: direction === "left" ? -scrollAmount : scrollAmount,
-            behavior: "smooth",
-          });
-        }
-      };
+      
     
       useEffect(() => {
   if (selectedItem?.type === "movie") {
@@ -466,6 +457,7 @@ const handleInteraction = () => {
 
 
       <Description text={selectedItem.overview} limit={180} />
+     
 
       {/* Season Selector */}
       <div className="w-full max-w-md relative">
@@ -581,6 +573,7 @@ const handleInteraction = () => {
     {/* Right Side: Related */}
        {/* Related / More like this - desktop scroll */}
        <div className="md:w-1/3 flex flex-col gap-4">
+        <Cast itemId={selectedItem.id} type={selectedItem.type} />
        {relatedItems.length > 0 && (
          <div className="relative mt-6">
            <h3 className="text-xl font-bold text-white mb-3">More like {selectedItem.title}</h3>
@@ -615,7 +608,7 @@ const handleInteraction = () => {
        className="w-full bg-white/5 text-white p-2 rounded-lg flex justify-between items-center hover:bg-white/10"
        onClick={() => setRelatedDropdownOpen((prev) => !prev)}
      >
-           <span>More like this</span>
+           <span>More....</span>
            <svg
              className={`w-4 h-4 transform transition-transform duration-200 ${
                relatedDropdownOpen ? "rotate-180" : ""
@@ -634,7 +627,7 @@ const handleInteraction = () => {
          </button>
    
          {relatedDropdownOpen && (
-           <div className="absolute w-full mt-1 bg-white/5 rounded-lg max-h-60 overflow-y-auto z-50 shadow-lg flex flex-col gap-2 p-2">
+           <div className="animate-presence-scroll absolute w-full mt-1 bg-white/5 rounded-lg max-h-60 overflow-y-auto z-50 shadow-lg grid grid-cols-2  p-2">
              {relatedItems.map((r) => (
                <div
                  key={r.id}
@@ -747,6 +740,7 @@ const handleInteraction = () => {
                       text={selectedItem.overview}
                       limit={180}
                     />
+                    <Cast itemId={selectedItem.id} type={selectedItem.type} />
                     </div>
                   
                 

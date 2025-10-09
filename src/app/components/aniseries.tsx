@@ -7,6 +7,7 @@ import { Play, SkipForward, Download, ChevronLeft, ChevronRight } from "lucide-r
 import { supabase } from "../lib/supabaseClient";
 import Description from "../components/description";
 import VideoModal from "./videoplayer";
+import Cast from "./cast";
 
 interface Episode {
   name: string;
@@ -405,7 +406,7 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
 
               {/* Right Side */}
               <div className="md:w-1/3 flex flex-col gap-4">
-                 {/* Season Selector */}
+              <Cast itemId={selectedTvshow.id}  type="tvshows"/>
                 {/* Related / More like this - desktop scroll */}
     {relatedTvshows.length > 0 && (
       <div className="relative mt-6">

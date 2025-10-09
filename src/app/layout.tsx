@@ -14,11 +14,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="antialiased">
-        {/* Floating Apple-style toggle in the top-right */}
-        {/* <div className="fixed top-2 left-22 z-50">
-          <ThemeToggle />
-        </div> */}
+      <body className="antialiased, font-sans">
+       
         <main>{children}</main>
       </body>
     </html>

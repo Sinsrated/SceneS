@@ -266,7 +266,7 @@ const MoviesPage = () => {
                     />
                   </div>
                 </div>
-
+<div className="md:w-1/3 flex flex-col gap-4">
                 {/* Related Movies */}
                 {relatedMovies.length > 0 && (
                   <div className="flex-1 mt-6">
@@ -343,6 +343,7 @@ const MoviesPage = () => {
 </div>
   </div>
                 )}
+                </div>
                 {/* Close Button */}
                 <button
                   className="absolute top-2 right-2 text-white text-2xl"

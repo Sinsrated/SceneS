@@ -14,6 +14,7 @@ import Header from "../components/Header";
 import { supabase } from "../lib/supabaseClient";
 import Description from "./description";
 import VideoModal from "./videoplayer";
+import Cast from "./cast";
 
 interface Movie {
   id: number;
@@ -30,6 +31,7 @@ interface Movie {
   created_at?: string;
   vj?: string;
   video_url?: string;
+  
 }
 
 interface Trailer {
@@ -286,9 +288,14 @@ const LatestMovies = () => {
                       text={selectedMovie.overview}
                       limit={180}
                     />
+
                   </div>
                 </div>
 
+<div className="md:w-1/3 flex flex-col gap-4">
+        <Cast itemId={selectedMovie.id} type="movie" />
+
+               
                 {/* Related Movies */}
                 {relatedMovies.length > 0 && (
                   <div className="flex-1 mt-6">
@@ -354,6 +361,7 @@ const LatestMovies = () => {
 </div>
   </div>
                 )}
+                </div>
                 {/* Close Button */}
                 <button
                   className="absolute top-2 right-2 text-white text-2xl"
