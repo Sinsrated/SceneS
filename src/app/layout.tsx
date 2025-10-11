@@ -15,7 +15,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased, font-sans">
-       
+       <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7832995803894398"
+     crossorigin="anonymous"></script>
         <main>{children}</main>
       </body>
     </html>
