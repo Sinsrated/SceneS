@@ -267,33 +267,31 @@ const Animation = () => {
                       ⭐ {selectedMovie.rating}
                     </p>
 
-                    <div className="flex flex-row items-center gap-4 mt-4">
-                    {selectedMovie.video_url && (
-                      <button
-                        onClick={() =>
-                          setVideoUrl(selectedMovie.video_url as string)
-                        }
-                        className="flex items-center gap-2   px-4 py-2 rounded-xl text-cyan-400 hover:bg-white/20 "
-                      >
-                        <PlayCircleIcon size={20} /> Play
-                      </button>
-                    )}
-
-                    {/* Download button in top-right corner */}
-       {selectedMovie?.video_url && (
-  <a
-    href={`/api/download-video?url=${encodeURIComponent(
-      selectedMovie.video_url.replace(/^http:/, "https:")
-    )}&name=${encodeURIComponent(selectedMovie.title || "movie")}`}
-    className="text-xs text-cyan-400 px-2 py-1 bg-black/30 backdrop-blur-md rounded-md hover:bg-white/20 flex items-center gap-1 transition"
-  >
-    <Download size={14} /> Download
-  </a>
-)}
-
-
-
-                      </div>
+                <div className="flex flex-row items-center gap-2 mt-4">
+                                   {selectedMovie.video_url && (
+                                     <button
+                                       onClick={() =>
+                                         setVideoUrl(selectedMovie.video_url as string)
+                                       }
+                                       className="flex items-center gap-2 bg-cyan-300/10 backdrop-blur-md w-full left-1/2 px-4 py-2  text-black hover:bg-white/20 "
+                                     >
+                                       <PlayCircleIcon size={20} /> Play
+                                     </button>
+                                   )}
+               
+               {/* Download button in top-right corner */}
+               {selectedMovie?.video_url && (
+                 <a
+                   href={`/api/download-video?url=${encodeURIComponent(
+                     selectedMovie.video_url.replace(/^http:/, "https:")
+                   )}&name=${encodeURIComponent(selectedMovie.title || "movie")}`}
+                   className="text-xs text-cyan-400 px-4 py-2 w-full  bg-white/10 backdrop-blur-md  hover:bg-cyan-300/20 flex items-center gap-1 transition"
+                 >
+                   <Download size={14} /> Download
+                 </a>
+               )}
+               
+                                     </div>
 
                     <Description
                       text={selectedMovie.overview}

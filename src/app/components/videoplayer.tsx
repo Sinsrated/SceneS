@@ -31,7 +31,24 @@ const VideoModal: React.FC<VideoModalProps> = ({ url, onClose }) => {
   const mouseMoveTimeout = useRef<NodeJS.Timeout | null>(null);
   const fingerOnScreen = useRef(false);
 
-  // Video loading
+  // --- Auto fullscreen when modal opens ---
+  useEffect(() => {
+    const enterFullscreen = async () => {
+      const elem = containerRef.current;
+      if (!elem) return;
+      try {
+        if (!document.fullscreenElement) {
+          await elem.requestFullscreen();
+          setFullscreen(true);
+        }
+      } catch {
+        // silent fail
+      }
+    };
+    enterFullscreen();
+  }, []);
+
+  // --- Video loading ---
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.src = url;
@@ -73,20 +90,7 @@ const VideoModal: React.FC<VideoModalProps> = ({ url, onClose }) => {
     videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
   };
 
-  const toggleFullscreen = () => {
-    const elem = containerRef.current;
-    if (!elem) return;
-
-    if (!document.fullscreenElement) {
-      elem.requestFullscreen().catch(() => {});
-      setFullscreen(true);
-    } else {
-      document.exitFullscreen().catch(() => {});
-      setFullscreen(false);
-    }
-  };
-
-  // Touch controls
+  // --- Touch controls (brightness + volume swipe) ---
   const handleTouchStart = (e: React.TouchEvent) => {
     fingerOnScreen.current = true;
     if (hideTimeout.current) clearTimeout(hideTimeout.current);
@@ -119,7 +123,7 @@ const VideoModal: React.FC<VideoModalProps> = ({ url, onClose }) => {
     }, 2000);
   };
 
-  // Desktop auto-hide for fullscreen
+  // --- Desktop auto-hide controls in fullscreen ---
   const handleMouseMove = () => {
     setControlsVisible(true);
     if (mouseMoveTimeout.current) clearTimeout(mouseMoveTimeout.current);
@@ -130,7 +134,7 @@ const VideoModal: React.FC<VideoModalProps> = ({ url, onClose }) => {
     }
   };
 
-  // Progress bar drag
+  // --- Progress drag ---
   const handleProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!videoRef.current) return;
     videoRef.current.currentTime = parseFloat(e.target.value);
@@ -140,7 +144,7 @@ const VideoModal: React.FC<VideoModalProps> = ({ url, onClose }) => {
   return (
     <div
       ref={containerRef}
-      className=" fixed inset-0 z-50 bg-black flex justify-center items-center"
+      className="fixed inset-0 z-50 bg-black flex justify-center items-center"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -148,7 +152,7 @@ const VideoModal: React.FC<VideoModalProps> = ({ url, onClose }) => {
     >
       <video
         ref={videoRef}
-        className="w-full h-full object-contain bg-black"
+        className="w-full h-full object-contain bg-black transition-all duration-300"
         style={{ filter: `brightness(${brightness})` }}
         autoPlay
         playsInline
@@ -157,48 +161,40 @@ const VideoModal: React.FC<VideoModalProps> = ({ url, onClose }) => {
 
       {controlsVisible && (
         <>
-          {/* Center Controls */}
+          {/* Center Controls - Glass 2035 */}
           <div className="absolute inset-0 flex items-center justify-center gap-8 pointer-events-none">
             <button
               onClick={handleBackward}
-              className="pointer-events-auto bg-black/25 p-4 rounded-full text-white/90 hover:bg-black/70"
+              className="pointer-events-auto bg-white/10 backdrop-blur-lg border border-white/20 p-4 rounded-full text-cyan-300 hover:bg-white/20 shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all"
             >
               10
             </button>
 
             <button
               onClick={togglePlay}
-              className="pointer-events-auto bg-black/25 p-4 rounded-full text-white/90 hover:bg-black/70"
+              className="pointer-events-auto bg-white/10 backdrop-blur-lg border border-white/20 p-5 rounded-full text-cyan-300 hover:bg-white/20 shadow-[0_0_20px_rgba(0,255,255,0.4)] transition-all"
             >
               {playing ? <Pause size={28} /> : <Play size={28} />}
             </button>
 
             <button
               onClick={handleForward}
-              className="pointer-events-auto bg-black/25 p-4 rounded-full text-white/90 hover:bg-black/70"
+              className="pointer-events-auto bg-white/10 backdrop-blur-lg border border-white/20 p-4 rounded-full text-cyan-300 hover:bg-white/20 shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all"
             >
               10
             </button>
           </div>
 
-          {/* Fullscreen */}
-          <button
-            onClick={toggleFullscreen}
-            className="absolute top-4 left-4 text-white/90 hover:text-white pointer-events-auto"
-          >
-            {fullscreen ? <Minimize size={24} /> : <Maximize size={24} />}
-          </button>
-
-          {/* Close */}
+          {/* Close Button - Glassic */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-white text-3xl pointer-events-auto"
+            className="absolute top-4 right-4 text-cyan-300 text-3xl pointer-events-auto bg-white/10 backdrop-blur-lg border border-white/20 rounded-full px-4 py-1 hover:bg-white/20 shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all"
           >
             ✕
           </button>
 
-          {/* 2035 Glass Style Progress + Time */}
-          <div className="absolute bottom-4 left-4 right-4 flex items-center gap-4 bg-white/10 backdrop-blur-md rounded-lg px-4 py-2 pointer-events-auto">
+          {/* 2035 Glass Style Progress + Time (unchanged) */}
+          <div className="absolute bottom-4 left-4 right-4 flex items-center gap-4 bg-white/10 backdrop-blur-md rounded-lg px-4 py-2 pointer-events-auto border border-white/20 shadow-[0_0_20px_rgba(0,255,255,0.2)]">
             <span className="text-xs text-white font-mono">{formatTime(currentTime)}</span>
             <input
               type="range"
@@ -209,7 +205,7 @@ const VideoModal: React.FC<VideoModalProps> = ({ url, onClose }) => {
               onChange={handleProgressChange}
               className="flex-1 h-1 rounded-full accent-cyan-400"
             />
-            <span className="text-xs text-white font-mono">{formatTime(duration)}</span>
+            <span className="text-xs text-cyan-300 font-mono">{formatTime(duration)}</span>
           </div>
         </>
       )}

@@ -8,6 +8,7 @@ import VideoModal from "../components/videoplayer";
 import Description from "../components/description";
 import Cast from "../components/cast";
 import { ChevronRight, Download, PlayCircleIcon, SkipForward, SkipForwardIcon } from "lucide-react";
+import Footer from "../components/footer";
 
 interface Episode {
   name: string;
@@ -196,7 +197,7 @@ export default function Vjspage() {
           <select
             value={selectedVj}
             onChange={(e) => handleVjChange(e.target.value)}
-            className="animate-presence-scroll bg-black/50 border border-white/20 text-white px-4 py-2 rounded-xl focus:ring-2 focus:ring-red-500"
+            className="animate-presence-scroll bg-black/50 border border-white/20 text-white px-4 py-2 rounded-xl focus:ring-2 focus:ring-cyan-500"
           >
             {vjs.map((vj) => (
               <option key={vj} value={vj} className="bg-black text-white">
@@ -208,7 +209,7 @@ export default function Vjspage() {
           {selectedVj !== "NON TRANSLATED" && (
             <button
               onClick={() => handleVjChange("NON TRANSLATED")}
-              className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-xl"
+              className="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-2 rounded-xl"
             >
               Reset
             </button>
@@ -574,31 +575,31 @@ export default function Vjspage() {
                        {selectedItem.release_date} • {selectedItem.genres.join(", ")}
                      </p>
        
-                           <div className="flex flex-row items-center gap-4 mt-4">
-                           {selectedItem.video_url && (
-                             <button
-                               onClick={() =>
-                                 setVideoUrl(selectedItem.video_url as string)
-                               }
-                               className="flex items-center gap-2   px-4 py-2 rounded-xl text-cyan-400 hover:bg-white/20 "
-                             >
-                               <PlayCircleIcon size={20} /> Play
-                             </button>
-                           )}
-       
-       {/* Download button in top-right corner */}
-       {selectedItem?.video_url && (
-         <a
-           href={`/api/download-video?url=${encodeURIComponent(
-             selectedItem.video_url.replace(/^http:/, "https:")
-           )}&name=${encodeURIComponent(selectedItem.title || "movie")}`}
-           className="text-xs text-cyan-400 px-2 py-1 bg-black/30 backdrop-blur-md rounded-md hover:bg-white/20 flex items-center gap-1 transition"
-         >
-           <Download size={14} /> Download
-         </a>
-       )}
-       
-                      </div>     
+                 <div className="flex flex-row items-center gap-2 mt-4">
+                                    {selectedItem.video_url && (
+                                      <button
+                                        onClick={() =>
+                                          setVideoUrl(selectedItem.video_url as string)
+                                        }
+                                        className="flex items-center gap-2 bg-cyan-300/10 backdrop-blur-md w-full left-1/2 px-4 py-2  text-black hover:bg-white/20 "
+                                      >
+                                        <PlayCircleIcon size={20} /> Play
+                                      </button>
+                                    )}
+                
+                {/* Download button in top-right corner */}
+                {selectedItem?.video_url && (
+                  <a
+                    href={`/api/download-video?url=${encodeURIComponent(
+                      selectedItem.video_url.replace(/^http:/, "https:")
+                    )}&name=${encodeURIComponent(selectedItem.title || "movie")}`}
+                    className="text-xs text-cyan-400 px-4 py-2 w-full  bg-white/10 backdrop-blur-md  hover:bg-cyan-300/20 flex items-center gap-1 transition"
+                  >
+                    <Download size={14} /> Download
+                  </a>
+                )}
+                
+                                      </div>   
        
                            <Description
                              text={selectedItem.overview}
@@ -687,6 +688,7 @@ export default function Vjspage() {
          )}
        </AnimatePresence>
 </section>
+<Footer />
 </>
 );
 }

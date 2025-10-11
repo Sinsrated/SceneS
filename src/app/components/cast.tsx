@@ -168,7 +168,7 @@ export default function Cast({ itemId, type }: CastProps) {
         <div className="hidden md:flex  mt-4">
           <button
             onClick={() => setShowAllCastDesktop(prev => !prev)}
-            className="px-4 py-2 rounded-lg  hover:text-red-200 text-cyan-500 font-medium transition"
+            className="px-4 py-2 rounded-lg  hover:text-cyan-200 text-cyan-500 font-medium transition"
           >
             {showAllCastDesktop ? "See Less" : "See More...."}
           </button>

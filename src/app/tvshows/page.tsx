@@ -8,6 +8,7 @@ import { supabase } from "../lib/supabaseClient";
 import Description from "../components/description";
 import VideoModal from "../components/videoplayer";
 import Cast from "../components/cast";
+import Footer from "../components/footer";
 
 interface Episode {
   name: string;
@@ -504,6 +505,7 @@ const timeout = setTimeout(() => setShowSkipButton(false), 2000);
                  )}
                </AnimatePresence>
       </section>
+      <Footer />
     </>
   );
 };

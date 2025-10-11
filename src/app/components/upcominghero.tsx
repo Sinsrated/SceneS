@@ -41,7 +41,7 @@ const ProfileHero = () => {
       {/* 🔮 Floating Neon Glass Cards */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 hidden md:flex gap-6">
         <div className="w-44 h-28 bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl flex flex-col items-center justify-center text-white text-sm animate-slide-up">
-          <User size={24} className="mb-2 text-red-400" />
+          <User size={24} className="mb-2 text-cyan-400" />
           <span>Your Watchlist</span>
         </div>
         <div className="w-44 h-28 bg-gradient-to-r from-[#ff4d6d]/30 to-[#7f5af0]/30 backdrop-blur-lg border border-white/20 rounded-3xl flex flex-col items-center justify-center text-white text-sm animate-slide-up delay-150">

@@ -40,7 +40,7 @@ export default function VerifyOtp({ email }: VerifyOtpProps) {
 
   return (
     <div className="flex flex-col gap-4 w-full max-w-md">
-      {error && <p className="text-red-400">{error}</p>}
+      {error && <p className="text-cyan-400">{error}</p>}
       {message && <p className="text-green-400">{message}</p>}
 
       <input

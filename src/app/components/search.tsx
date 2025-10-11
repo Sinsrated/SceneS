@@ -384,7 +384,7 @@ const openSuggestion = useCallback(
               </button>
               <div className="flex-1">
                 <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/5 border border-white/10">
-                  <SearchIcon className="text-red-400" size={20} />
+                  <SearchIcon className="text-cyan-400" size={20} />
                   <input
                     ref={inputRef}
                     type="text"
@@ -414,7 +414,7 @@ const openSuggestion = useCallback(
                     className="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-white/5 transition"
                   >
                     <span className="text-white">{r.title},   {r.vj}</span>
-                    <span className="text-xs text-red-400 uppercase">{r.type}</span>
+                    <span className="text-xs text-cyan-400 uppercase">{r.type}</span>
                     
                   </button>
                 ))}
@@ -743,31 +743,31 @@ const openSuggestion = useCallback(
                 {selectedItem.release_date} • {selectedItem.genres.join(", ")}
               </p>
 
-                    <div className="flex flex-row items-center gap-4 mt-4">
-                    {selectedItem.video_url && (
-                      <button
-                        onClick={() =>
-                          setVideoUrl(selectedItem.video_url as string)
-                        }
-                        className="flex items-center gap-2   px-4 py-2 rounded-xl text-cyan-400 hover:bg-white/20 "
-                      >
-                        <PlayCircleIcon size={20} /> Play
-                      </button>
-                    )}
-
-{/* Download button in top-right corner */}
-{selectedItem?.video_url && (
-  <a
-    href={`/api/download-video?url=${encodeURIComponent(
-      selectedItem.video_url.replace(/^http:/, "https:")
-    )}&name=${encodeURIComponent(selectedItem.title || "movie")}`}
-    className="text-xs text-cyan-400 px-2 py-1 bg-black/30 backdrop-blur-md rounded-md hover:bg-white/20 flex items-center gap-1 transition"
-  >
-    <Download size={14} /> Download
-  </a>
-)}
-
-               </div>     
+                    <div className="flex flex-row items-center gap-2 mt-4">
+                                                       {selectedItem.video_url && (
+                                                         <button
+                                                           onClick={() =>
+                                                             setVideoUrl(selectedItem.video_url as string)
+                                                           }
+                                                           className="flex items-center gap-2 bg-cyan-300/10 backdrop-blur-md w-full left-1/2 px-4 py-2  text-black hover:bg-white/20 "
+                                                         >
+                                                           <PlayCircleIcon size={20} /> Play
+                                                         </button>
+                                                       )}
+                                   
+                                   {/* Download button in top-right corner */}
+                                   {selectedItem?.video_url && (
+                                     <a
+                                       href={`/api/download-video?url=${encodeURIComponent(
+                                         selectedItem.video_url.replace(/^http:/, "https:")
+                                       )}&name=${encodeURIComponent(selectedItem.title || "movie")}`}
+                                       className="text-xs text-cyan-400 px-4 py-2 w-full  bg-white/10 backdrop-blur-md  hover:bg-cyan-300/20 flex items-center gap-1 transition"
+                                     >
+                                       <Download size={14} /> Download
+                                     </a>
+                                   )}
+                                   
+                                                         </div>
 
                     <Description
                       text={selectedItem.overview}
@@ -869,7 +869,7 @@ const openSuggestion = useCallback(
           }}
           className="flex items-center w-64 gap-2 px-2 py-2 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-lg text-gray-500"
         >
-          <SearchIcon className="text-red-400" size={20} />
+          <SearchIcon className="text-cyan-400" size={20} />
           <span>Search</span>
         </button>
       )}
@@ -883,7 +883,7 @@ const openSuggestion = useCallback(
           }}
           className="flex items-center w-64 gap-2 px-4 py-2 rounded-2xl bg-white/5 backdrop-blur-x1 border border-white/5 text-gray-500"
         >
-          <SearchIcon className="text-red-400" size={20} />
+          <SearchIcon className="text-cyan-400" size={20} />
           <span>Search</span>
         </button>
       )}

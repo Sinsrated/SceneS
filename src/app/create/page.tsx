@@ -80,7 +80,7 @@ export default function SignUpPage() {
       >
         <h1 className="text-2xl font-bold text-center">Create Account</h1>
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && <p className="text-cyan-400 text-sm">{error}</p>}
 
         {/* Username */}
         <div className="flex items-center bg-white/5 rounded-xl px-4 py-3">
