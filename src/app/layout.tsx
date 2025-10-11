@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Script from "next/script";
+import Script from "next/script"; // ✅ This makes external scripts safe
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,15 +15,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* ✅ Put AdSense script in <head> */}
+        {/* ✅ This is the SAME AdSense code you pasted, just wrapped in Next's Script */}
         <Script
-          id="adsense-init"
           async
-          strategy="beforeInteractive" // loads before hydration
+          strategy="beforeInteractive" // ensures it loads before the app hydrates
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7832995803894398"
           crossOrigin="anonymous"
         />
       </head>
+
       <body className="antialiased font-sans">
         <main>{children}</main>
       </body>
