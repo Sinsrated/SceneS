@@ -241,7 +241,7 @@ const MoviesPage = () => {
                                             onClick={() =>
                                               setVideoUrl(selectedMovie.video_url as string)
                                             }
-                                            className="flex items-center gap-2 bg-cyan-300/10 backdrop-blur-md w-full left-1/2 px-4 py-2  text-black hover:bg-white/20 "
+                                            className="flex items-center gap-2 bg-cyan-300/10 backdrop-blur-md w-full left-1/2 px-4 py-2  text-white hover:bg-white/20 "
                                           >
                                             <PlayCircleIcon size={20} /> Play
                                           </button>
@@ -277,19 +277,7 @@ const MoviesPage = () => {
 
                     {/* Desktop scroll */}
                     <div className="hidden md:block relative">
-                      {/* <button
-                        onClick={() => scrollRelated("left")}
-                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full"
-                      >
-                        <ChevronLeft size={28} />
-                      </button>
-                      <button
-                        onClick={() => scrollRelated("right")}
-                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full"
-                      >
-                        <ChevronRight size={28} />
-                      </button> */}
-
+                     
                       <div
                         ref={relatedRef}
                         className="animate-presence-scroll grid grid-cols-3 flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth relative"

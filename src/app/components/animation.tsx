@@ -273,7 +273,7 @@ const Animation = () => {
                                        onClick={() =>
                                          setVideoUrl(selectedMovie.video_url as string)
                                        }
-                                       className="flex items-center gap-2 bg-cyan-300/10 backdrop-blur-md w-full left-1/2 px-4 py-2  text-black hover:bg-white/20 "
+                                       className="flex items-center gap-2 bg-cyan-300/10 backdrop-blur-md w-full left-1/2 px-4 py-2  text-white hover:bg-white/20 "
                                      >
                                        <PlayCircleIcon size={20} /> Play
                                      </button>
