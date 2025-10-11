@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import Script from "next/script"; // ✅ Import next/script
+import Script from "next/script";
 import "./globals.css";
-import ThemeToggle from "./components/ThemeToggle";
 
 export const metadata: Metadata = {
   title: "Kyogobe Watch",
@@ -14,17 +13,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="antialiased font-sans">
-        {/* ✅ Load Google AdSense asynchronously and safely */}
+    <html lang="en">
+      <head>
+        {/* ✅ Put AdSense script in <head> */}
         <Script
-          id="adsbygoogle-init"
+          id="adsense-init"
           async
-          strategy="afterInteractive"
+          strategy="beforeInteractive" // loads before hydration
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7832995803894398"
           crossOrigin="anonymous"
         />
-
+      </head>
+      <body className="antialiased font-sans">
         <main>{children}</main>
       </body>
     </html>
