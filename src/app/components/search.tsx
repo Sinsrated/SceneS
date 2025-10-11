@@ -496,7 +496,7 @@ const openSuggestion = useCallback(
       {/* Season Selector */}
       <div className="w-full max-w-md relative">
         <button
-          className="w-full bg-white/5 text-white flex justify-between items-center p-2 rounded-lg hover:bg-white/10"
+          className="w-full bg-white/10 text-white flex justify-between items-center p-2 rounded-lg hover:bg-white/20"
           onClick={() => setSeasonDropdownOpen((prev) => !prev)}
         >
           <span>
@@ -881,7 +881,7 @@ const openSuggestion = useCallback(
             setOpen(true);
             setTimeout(() => inputRef.current?.focus(), 50);
           }}
-          className="flex items-center w-64 gap-2 px-4 py-2 rounded-2xl bg-white/5 backdrop-blur-x1 border border-white/5 text-gray-500"
+          className="flex items-center w-full gap-2 px-4 py-2 rounded-2xl bg-white/5 backdrop-blur-x1 border border-white/5 text-cyan-200/20"
         >
           <SearchIcon className="text-cyan-400" size={20} />
           <span>Search</span>

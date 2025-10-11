@@ -38,8 +38,8 @@ const Navbar = () => {
       {/* 🌐 Desktop Navbar */}
       <nav
         className="hidden md:flex fixed top-4 left-1/2 -translate-x-1/2 w-[92%] max-w-6xl 
-        bg-gradient-to-br from-cyan-400/10 via-cyan-300/5 to-transparent 
-        backdrop-blur-5xl border border-cyan-400/30 
+        bg-white/1 
+        backdrop-blur-5xl border border-white/10 
         rounded-3xl px-8 py-3 items-center justify-between z-50
         transition-all duration-500"
       >
@@ -97,8 +97,8 @@ const Navbar = () => {
       {/* 📱 Mobile Top Bar */}
       <header
         className="md:hidden fixed top-3 left-1/2 -translate-x-1/2 w-[92%] 
-        bg-gradient-to-br from-cyan-400/10 via-cyan-300/5 to-transparent 
-        backdrop-blur-x5 border border-cyan-400/20 
+        bg-white/2  
+        backdrop-blur-x5 border border-white/10 
          rounded-2xl px-4 py-2 flex items-center justify-between z-50"
       >
         <div
@@ -115,8 +115,8 @@ const Navbar = () => {
       {/* 📱 Mobile Bottom Navbar */}
       <nav
         className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md 
-        bg-gradient-to-t from-cyan-400/10 via-cyan-300/5 to-transparent 
-        backdrop-blur-x5 border border-cyan-400/20 
+        bg-white/2 
+        backdrop-blur-x5 border border-white/20 
         rounded-3xl px-4 py-3 flex justify-around items-center z-50"
       >
         {navItems.map((item) => (

@@ -172,14 +172,14 @@ const VideoModal: React.FC<VideoModalProps> = ({ url, onClose }) => {
 
             <button
               onClick={togglePlay}
-              className="pointer-events-auto bg-white/10 backdrop-blur-lg border border-white/20 p-5 rounded-full text-cyan-300 hover:bg-white/20 shadow-[0_0_20px_rgba(0,255,255,0.4)] transition-all"
+              className="pointer-events-auto bg-white/10 backdrop-blur-lg border border-white/20 p-5 rounded-full text-cyan-300 hover:bg-white/20 transition-all"
             >
               {playing ? <Pause size={28} /> : <Play size={28} />}
             </button>
 
             <button
               onClick={handleForward}
-              className="pointer-events-auto bg-white/10 backdrop-blur-lg border border-white/20 p-4 rounded-full text-cyan-300 hover:bg-white/20 shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all"
+              className="pointer-events-auto bg-white/10 backdrop-blur-lg border border-white/20 p-4 rounded-full text-cyan-300 hover:bg-white/20  transition-all"
             >
               10
             </button>
@@ -188,13 +188,13 @@ const VideoModal: React.FC<VideoModalProps> = ({ url, onClose }) => {
           {/* Close Button - Glassic */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-cyan-300 text-3xl pointer-events-auto bg-white/10 backdrop-blur-lg border border-white/20 rounded-full px-4 py-1 hover:bg-white/20 shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all"
+            className="absolute top-4 right-4 text-cyan-300 text-3xl pointer-events-auto bg-white/10 backdrop-blur-2g border border-white/20 rounded-full px-4 py-1 hover:bg-white/20  transition-all"
           >
             ✕
           </button>
 
           {/* 2035 Glass Style Progress + Time (unchanged) */}
-          <div className="absolute bottom-4 left-4 right-4 flex items-center gap-4 bg-white/10 backdrop-blur-md rounded-lg px-4 py-2 pointer-events-auto border border-white/20 shadow-[0_0_20px_rgba(0,255,255,0.2)]">
+          <div className="absolute bottom-4 left-4 right-4 flex items-center gap-4 bg-white/10 backdrop-blur-md rounded-lg px-4 py-2 pointer-events-auto border border-white/20 ">
             <span className="text-xs text-white font-mono">{formatTime(currentTime)}</span>
             <input
               type="range"
